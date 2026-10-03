@@ -1,0 +1,38 @@
+.games-workspace {
+  > section:first-child > .section-heading {
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+  }
+  &__history {
+    margin-top: 2.25rem;
+  }
+  &--expanded {
+    padding: 0.75rem;
+  }
+  &__exit {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 10;
+    .button.icon-button {
+      width: 1.5rem;
+      height: 1.5rem;
+      min-height: 1.5rem;
+      padding: 0.25rem;
+      border-radius: 0 0 0 6px;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+    }
+  }
+}
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 285px), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+@media (min-width: 1800px) {
+  .games-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}

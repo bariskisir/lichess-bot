@@ -1,0 +1,13 @@
+node_modules/
+dist/
+data/
+logs/
+.env
+.env.local
+coverage/
+test-results/
+playwright-report/
+.impeccable/config.local.json
+.impeccable/review/
+.impeccable/seeds/
+*.tsbuildinfo

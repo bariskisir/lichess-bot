@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "jsx-a11y", "import"],
+  "categories": { "correctness": "error" },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/forbid-dom-props": ["error", { "forbid": ["style"] }],
+    "typescript/no-explicit-any": "error",
+    "jsx-a11y/prefer-tag-over-role": "off"
+  },
+  "ignorePatterns": ["dist", "node_modules", ".agents", ".impeccable"]
+}

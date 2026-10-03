@@ -1,0 +1,54 @@
+.authentication-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1.25rem;
+  &__theme {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+  }
+}
+.authentication-panel {
+  width: min(100%, 380px);
+  &__brand {
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+    color: var(--positive);
+    font-weight: 650;
+    margin-bottom: 3rem;
+    svg {
+      width: 30px;
+      height: 30px;
+    }
+  }
+  h1 {
+    font-size: 1.75rem;
+    letter-spacing: -0.025em;
+    margin-bottom: 0.65rem;
+  }
+  > p {
+    color: var(--muted);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+  form {
+    display: grid;
+    gap: 1.25rem;
+  }
+}
+.security-settings {
+  &__form {
+    display: grid;
+    gap: 1rem;
+  }
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  &__description p + p {
+    margin-top: 0.75rem;
+  }
+}

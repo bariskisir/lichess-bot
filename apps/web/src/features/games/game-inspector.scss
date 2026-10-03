@@ -1,0 +1,106 @@
+.game-inspector {
+  &__position {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 14fr);
+    gap: 0.5rem;
+  }
+  padding: 0;
+  width: min(800px, calc(100% - 2rem));
+  max-height: calc(100dvh - 2rem);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  &::backdrop {
+    background: rgb(5 12 8 / 70%);
+  }
+  &__content {
+    padding: 1.5rem;
+  }
+  header {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    h2 {
+      font-size: 1.05rem;
+    }
+    p {
+      margin-top: 0.4rem;
+      font-size: 0.8125rem;
+      color: var(--muted);
+    }
+  }
+  &__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+  &__navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.1rem;
+    margin-top: 0.5rem;
+    span {
+      font-size: 0.75rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+    }
+  }
+  aside {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    h3 {
+      font-size: 0.8125rem;
+    }
+  }
+  &__moves {
+    flex: 1;
+    min-height: 100px;
+    max-height: 340px;
+    overflow-y: auto;
+  }
+}
+.move-pair {
+  display: grid;
+  grid-template-columns: 2rem 1fr 1fr;
+  align-items: center;
+  font-size: 0.8125rem;
+  padding: 0.15rem 0;
+  > span {
+    color: var(--muted);
+  }
+  button {
+    text-align: left;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    padding: 0.45rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    &:hover {
+      background: var(--hover);
+    }
+    &.is-selected {
+      background: var(--selected);
+      color: var(--positive);
+    }
+  }
+}
+@media (max-width: 600px) {
+  .game-inspector {
+    &__content {
+      padding: 1rem;
+    }
+    &__layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    &__moves {
+      max-height: 180px;
+    }
+  }
+}

@@ -1,0 +1,34 @@
+// Geometry, signed scores and label placement follow chessanalyzer's evaluation bar.
+.evaluation {
+  position: relative;
+  overflow: hidden;
+  background: #403d39;
+  border-radius: 5px;
+  &__bar {
+    appearance: none;
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    background: #403d39;
+    border: 0;
+    &::-webkit-progress-bar {
+      background: #403d39;
+    }
+    &::-webkit-progress-value {
+      background: #fff;
+    }
+    &::-moz-progress-bar {
+      background: #fff;
+    }
+  }
+  &--reversed &__bar {
+    transform: none;
+  }
+  &--stale {
+    opacity: 0.8;
+  }
+}

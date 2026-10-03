@@ -1,0 +1,56 @@
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.activity-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1.15rem 0;
+  border-bottom: 1px solid var(--line);
+  > svg {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    color: var(--positive);
+    margin-top: 1px;
+  }
+  > div {
+    flex: 1;
+    min-width: 0;
+    p {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
+    span {
+      display: block;
+      margin-top: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+  }
+  time {
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+  &--warn > svg {
+    color: var(--warning);
+  }
+  &--error > svg {
+    color: var(--danger);
+  }
+}
+@media (max-width: 500px) {
+  .activity-row {
+    flex-wrap: wrap;
+    time {
+      width: 100%;
+      margin-left: 1.9rem;
+    }
+  }
+}

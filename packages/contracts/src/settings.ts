@@ -57,6 +57,7 @@ export const settingsSchema = z.object({
   variations: z.number().int().min(2).max(10).default(10),
   mistakeProbability: z.number().min(0).max(100).default(25),
   mistakeKeep: z.number().min(0).max(5).default(2),
+  dynamicDelay: z.boolean().default(true),
   randomDelayMaxMs: z.number().int().min(0).max(10_000).default(1000),
   drawManagedAccounts: z.boolean().default(true),
   claimVictory: z.boolean().default(true),

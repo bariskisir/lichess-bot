@@ -52,4 +52,23 @@ describe('local persistence', () => {
     await writeFile(join(path, 'configuration.json'), '{broken');
     await expect(new JsonConfigurationRepository(path).load()).rejects.toThrow('Restore or repair');
   });
+  it('persists a history reset and preserves new results submitted after it', async () => {
+    const path = await directory();
+    const archive = new GameArchive(path);
+    await archive.load();
+    const first = archive.save(archivedGame(), 200);
+    const clear = archive.clear();
+    const last = archive.save({ ...archivedGame(), id: 'newgame1' }, 200);
+    await Promise.all([first, clear, last]);
+    await archive.flush();
+    expect((await new GameArchive(path).load()).map((game) => game.id)).toEqual(['newgame1']);
+    await archive.clear();
+    expect(await new GameArchive(path).load()).toEqual([]);
+  });
+  it('loads older archives without delay metadata', async () => {
+    const path = await directory();
+    const { delayUntil: _delayUntil, ...legacy } = archivedGame();
+    await writeFile(join(path, 'history.json'), JSON.stringify([legacy]));
+    expect((await new GameArchive(path).load())[0]?.delayUntil).toBeNull();
+  });
 });

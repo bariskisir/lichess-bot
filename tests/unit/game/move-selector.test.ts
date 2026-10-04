@@ -34,6 +34,7 @@ describe('evaluation depth', () => {
         onInfo,
         () => {},
         getDeadline,
+        () => 10_000,
       ),
     ).toBe('g1f3');
     expect(analyze.mock.calls.map(([request]) => [request.depth, request.variations])).toEqual([
@@ -43,6 +44,9 @@ describe('evaluation depth', () => {
     ]);
     expect(onInfo).toHaveBeenCalledWith(expect.objectContaining({ depth: 17 }));
     expect(analyze.mock.calls.every(([request]) => request.getDeadline === getDeadline)).toBe(true);
+    expect(
+      analyze.mock.calls.every(([request]) => typeof request.getSearchDeadline === 'function'),
+    ).toBe(true);
     expect(position.chess.fen()).toBe(fen);
   });
 });

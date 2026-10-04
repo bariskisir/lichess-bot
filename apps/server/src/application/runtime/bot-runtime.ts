@@ -17,6 +17,7 @@ import { MatchBudget } from '../scheduling/match-budget.js';
 import { PoolRotation } from '../scheduling/pool-rotation.js';
 import { AccountRunner } from './account-runner.js';
 import type { GameHistoryRepository } from '../game/game-history-repository.js';
+import { GameHistoryService } from '../game/game-history-service.js';
 import { abortError, isAbort, sleep } from '../../shared/async.js';
 
 export class RuntimeConflict extends Error {}
@@ -30,15 +31,21 @@ export class BotRuntime {
   private pool?: EnginePool;
   private terminalRequested = false;
   private immediateStop = false;
+  private readonly history: GameHistoryService;
 
   constructor(
     private readonly config: ConfigurationService,
     private readonly engines: EngineRegistry,
     private readonly gateways: GatewayFactory,
     private readonly store: DashboardStore,
-    private readonly archive: GameHistoryRepository,
+    archive: GameHistoryRepository,
     private readonly logger: Logger,
-  ) {}
+  ) {
+    this.history = new GameHistoryService(archive, store);
+  }
+  clearHistory(): Promise<void> {
+    return this.history.clear();
+  }
   get editable(): boolean {
     return ['idle', 'completed', 'error'].includes(this.phase) && !this.task;
   }
@@ -95,7 +102,8 @@ export class BotRuntime {
           if (this.immediateStop) {
             this.setPhase('idle');
             for (const game of this.store.snapshot().games)
-              this.store.updateGame(game.id, { activity: 'recovering' });
+              if (!game.result)
+                this.store.updateGame(game.id, { activity: 'recovering', delayUntil: null });
             this.store.addActivity(
               'warn',
               'Local play stopped. Start a session to recover unfinished games.',
@@ -197,8 +205,6 @@ export class BotRuntime {
 
   private async complete(game: GameView): Promise<void> {
     if (!this.budget?.complete(game.id)) return;
-    this.store.setGame(game);
-    this.store.finishGame(game.id);
     const current = this.store.snapshot().runtime;
     const counter =
       game.result === 'win'
@@ -212,7 +218,7 @@ export class BotRuntime {
     this.store.addActivity('info', `Game finished: ${game.result}.`, game.accountId, game.id);
     this.updateCounts();
     try {
-      await this.archive.save(game, this.config.settings.historyLimit);
+      await this.history.record(game, this.config.settings.historyLimit);
     } catch {
       this.store.addActivity(
         'error',

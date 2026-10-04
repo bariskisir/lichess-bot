@@ -1,6 +1,7 @@
 import type { BotSettings } from '../../../../../packages/contracts/src/index.js';
 import type { AnalysisService, Variation } from '../../domain/engine/engine.js';
 import type { GamePosition } from '../../domain/game/position.js';
+import { MoveSelectionBudget } from './timing/move-selection-budget.js';
 
 export class MoveSelector {
   constructor(
@@ -15,6 +16,40 @@ export class MoveSelector {
     onInfo: (variation: Variation) => void,
     onStarted: () => void,
     getDeadline?: () => number | null,
+    getRemainingMs?: () => number | null,
+  ): Promise<string> {
+    if (!getRemainingMs)
+      return this.choose(gameId, position, settings, signal, onInfo, onStarted, getDeadline);
+    const budget = new MoveSelectionBudget(position, getRemainingMs);
+    return budget.run(signal, (scope, getSearchDeadline) =>
+      this.choose(
+        gameId,
+        position,
+        settings,
+        scope,
+        (variation) => {
+          if (scope.aborted) return;
+          budget.remember(variation);
+          onInfo(variation);
+        },
+        onStarted,
+        getDeadline,
+        getSearchDeadline,
+        (move) => budget.rememberMove(move),
+      ),
+    );
+  }
+
+  private async choose(
+    gameId: string,
+    position: GamePosition,
+    settings: BotSettings,
+    signal: AbortSignal,
+    onInfo: (variation: Variation) => void,
+    onStarted: () => void,
+    getDeadline?: () => number | null,
+    getSearchDeadline?: () => number | null,
+    onCandidate?: (move: string) => void,
   ): Promise<string> {
     const request = {
       gameId,
@@ -28,8 +63,14 @@ export class MoveSelector {
       onInfo,
       onStarted,
       ...(getDeadline ? { getDeadline } : {}),
+      ...(getSearchDeadline ? { getSearchDeadline } : {}),
     };
     const analysis = await this.engines.analyze(request);
+    signal.throwIfAborted();
+    const outOfTime = () => (getSearchDeadline?.() ?? Infinity) <= Date.now();
+    position.candidate(analysis.bestMove);
+    onCandidate?.(analysis.bestMove);
+    if (outOfTime()) return analysis.bestMove;
     let root = analysis.variations[0];
     if (
       settings.evaluationDepth > settings.depth &&
@@ -40,10 +81,13 @@ export class MoveSelector {
         depth: settings.evaluationDepth,
         variations: 1,
       });
+      signal.throwIfAborted();
       root = evaluation.variations[0] ?? root;
       if (root) onInfo(root);
+      onCandidate?.(evaluation.bestMove);
     }
     let chosen = analysis.bestMove;
+    if (outOfTime()) return chosen;
     const winningMates = [...analysis.variations, ...(root ? [root] : [])]
       .filter((variation) => variation.mate !== null && variation.mate > 0)
       .sort((a, b) => a.mate! - b.mate!);
@@ -66,11 +110,15 @@ export class MoveSelector {
           Math.max(settings.evaluationDepth, settings.depth),
           signal,
           getDeadline,
+          getSearchDeadline,
         )) >= -0.5
-      )
+      ) {
         chosen = candidate;
+        onCandidate?.(chosen);
+      }
     }
     if (
+      !outOfTime() &&
       root &&
       root.mate === null &&
       root.score >= settings.mistakeKeep &&
@@ -85,6 +133,7 @@ export class MoveSelector {
         )
         .sort((a, b) => a.score - b.score);
       for (const candidate of candidates) {
+        if (outOfTime()) break;
         const move = candidate.moves[0];
         if (
           move &&
@@ -95,9 +144,11 @@ export class MoveSelector {
             Math.max(settings.evaluationDepth, settings.depth),
             signal,
             getDeadline,
+            getSearchDeadline,
           )) >= settings.mistakeKeep
         ) {
           chosen = move;
+          onCandidate?.(chosen);
           break;
         }
       }
@@ -112,6 +163,7 @@ export class MoveSelector {
     depth: number,
     signal: AbortSignal,
     getDeadline?: () => number | null,
+    getSearchDeadline?: () => number | null,
   ): Promise<number> {
     const candidate = position.candidate(move);
     if (candidate.isCheckmate()) return Number.POSITIVE_INFINITY;
@@ -123,6 +175,7 @@ export class MoveSelector {
       variations: 1,
       signal,
       ...(getDeadline ? { getDeadline } : {}),
+      ...(getSearchDeadline ? { getSearchDeadline } : {}),
     });
     const score = result.variations[0];
     if (!score) return Number.NEGATIVE_INFINITY;

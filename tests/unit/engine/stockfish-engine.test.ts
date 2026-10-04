@@ -41,4 +41,32 @@ describe('local Stockfish 19 Lite', () => {
       }
     },
   );
+  it('returns a legal partial result on a timed search and reuses the same worker afterward', async () => {
+    const engine = new StockfishEngine(16, pino({ level: 'silent' }));
+    const request = {
+      gameId: 'timed',
+      position: { moves: ['e2e4', 'e7e5'] },
+      variations: 1,
+      signal: AbortSignal.timeout(20_000),
+    };
+    try {
+      await engine.analyze({ ...request, depth: 3 });
+      const deadline = Date.now() + 250;
+      const result = await engine.analyze({
+        ...request,
+        depth: 40,
+        getSearchDeadline: () => deadline,
+      });
+      const board = new Chess();
+      board.move('e4');
+      board.move('e5');
+      expect(() => applyUci(board, result.bestMove)).not.toThrow();
+      expect(result.variations[0]?.depth ?? 0).toBeLessThan(40);
+      expect(
+        (await engine.analyze({ ...request, depth: 3 })).variations[0]?.depth,
+      ).toBeGreaterThanOrEqual(3);
+    } finally {
+      await engine.close();
+    }
+  });
 });

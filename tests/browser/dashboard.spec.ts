@@ -118,7 +118,8 @@ test('mobile navigation reaches engine selection and preview stays read-only', a
     current === 'dark' ? 'light' : 'dark',
   );
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
-  await expect(page.getByLabel('Engine', { exact: true })).toHaveValue('stockfish-19-lite-local');
+  await expect(page.locator('.engine-identity__details strong')).toHaveText('Stockfish 19 Lite');
+  await expect(page.getByRole('button', { name: 'Engine', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Save settings' })).toBeDisabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
@@ -144,9 +145,9 @@ test('history displays smaller complete boards, filters results and links public
   await expect(page.locator('.history-list')).toHaveCount(0);
   await page.getByRole('combobox', { name: 'Game result', exact: true }).selectOption('win');
   await expect(page.locator('.finished-games-grid .game-card')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Inspect game history0' }).click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await page.keyboard.press('Escape');
+  await expect(page.locator('.finished-games-grid .game-card__inspect')).toHaveCount(0);
+  await page.locator('.finished-games-grid .chessboard').first().click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('combobox', { name: 'Game result', exact: true }).selectOption('all');
   await page.getByLabel('Search game history', { exact: true }).fill('no-such-player');
   await expect(page.getByRole('heading', { name: 'No games match this filter' })).toBeVisible();
@@ -183,11 +184,15 @@ test('settings expose the requested defaults and dashboard passwords can be set,
     await expect(page.locator('.pool-selector input:checked')).toHaveCount(6);
     await expect(page.getByLabel('Lichess request attempts', { exact: true })).toHaveValue('3');
     await expect(page.getByLabel('Retry interval (ms)', { exact: true })).toHaveValue('1000');
-    const engine = page.getByLabel('Engine', { exact: true });
-    await expect(engine.locator('option')).toHaveCount(3);
-    await engine.selectOption('stockfish-18-lite-local');
-    await expect(page.locator('.engine-identity strong')).toHaveText('Stockfish 18 Lite');
-    await engine.selectOption('stockfish-19-lite-local');
+    const engine = page.getByRole('button', { name: 'Engine', exact: true });
+    await engine.click();
+    await expect(
+      page.getByRole('listbox', { name: 'Chess engines' }).getByRole('option'),
+    ).toHaveCount(3);
+    await page.getByRole('option', { name: 'Stockfish 18 Lite', exact: true }).click();
+    await expect(page.locator('.engine-identity__details strong')).toHaveText('Stockfish 18 Lite');
+    await engine.click();
+    await page.getByRole('option', { name: 'Stockfish 19 Lite', exact: true }).click();
     await expect(page.getByLabel('User-Agent', { exact: true })).not.toHaveValue(/lichess-bot/);
     await expect(page.getByText('No password is set.', { exact: false })).toBeVisible();
     await page.getByLabel('Dashboard password', { exact: true }).fill(password);

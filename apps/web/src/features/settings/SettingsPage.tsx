@@ -49,7 +49,8 @@ export function SettingsPage({
       alive = false;
     };
   }, []);
-  const disabled = (_name?: keyof BotSettings) => !editable || demo || busy || !loaded;
+  const disabled = (name?: keyof BotSettings) =>
+    !editable || demo || busy || !loaded || (name === 'randomDelayMaxMs' && draft.dynamicDelay);
   function update<K extends keyof BotSettings>(name: K, value: BotSettings[K]): void {
     setDraft((current) => ({ ...current, [name]: value }));
     setSaved(false);
@@ -132,7 +133,13 @@ export function SettingsPage({
               disabled={disabled()}
             />
             <div className="settings-field-grid">
-              {number('depth', 'Search depth', 1, 40, 'Every move is searched to this depth.')}
+              {number(
+                'depth',
+                'Search depth',
+                1,
+                40,
+                'Target depth; shortened when the clock budget is tight.',
+              )}
               {number(
                 'evaluationDepth',
                 'Evaluation depth',
@@ -238,13 +245,35 @@ export function SettingsPage({
                 </select>
                 <p>Balanced selects an evaluated alternative near the mean.</p>
               </div>
-              {number(
-                'randomDelayMaxMs',
-                'Maximum delay (ms)',
-                0,
-                10_000,
-                'Random total turn delay, including queue and analysis time; 0 disables it.',
-              )}
+              <div className="settings-delay">
+                <label className="switch-field" htmlFor="dynamicDelay" aria-label="Dynamic delay">
+                  <input
+                    id="dynamicDelay"
+                    type="checkbox"
+                    role="switch"
+                    checked={draft.dynamicDelay}
+                    aria-checked={draft.dynamicDelay}
+                    disabled={disabled('dynamicDelay')}
+                    aria-describedby="dynamic-delay-help"
+                    onChange={(event) => update('dynamicDelay', event.target.checked)}
+                  />
+                  <span>
+                    <strong>Dynamic delay</strong>
+                    <small id="dynamic-delay-help">
+                      Starts with 40 moves; adapts to the clock, increment, and game progress.
+                    </small>
+                  </span>
+                </label>
+                {number(
+                  'randomDelayMaxMs',
+                  'Maximum delay (ms)',
+                  0,
+                  10_000,
+                  draft.dynamicDelay
+                    ? 'Ignored while Dynamic delay is on.'
+                    : 'Random total turn delay, including queue and analysis time; 0 disables it.',
+                )}
+              </div>
             </div>
             <details className="advanced-settings">
               <summary>Alternative move settings</summary>

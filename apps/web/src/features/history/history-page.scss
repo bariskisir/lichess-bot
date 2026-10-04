@@ -1,0 +1,26 @@
+.history-page {
+  .section-heading {
+    flex-wrap: wrap;
+  }
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+}
+.history-clear {
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    > span {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+  }
+  > .field-error {
+    margin-top: 0.4rem;
+  }
+}

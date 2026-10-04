@@ -166,12 +166,16 @@
   }
 }
 .game-state {
+  white-space: nowrap;
   color: var(--muted);
   font-size: 0.6875rem;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
+  &__countdown {
+    font-variant-numeric: tabular-nums;
+  }
   &--thinking,
   &--win {
     color: var(--positive);

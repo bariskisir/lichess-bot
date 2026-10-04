@@ -137,6 +137,7 @@ export function archivedGame(): GameView {
     timeControl: '3+2',
     rated: true,
     activity: 'finished',
+    delayUntil: null,
     status: 'mate',
     evaluation: null,
     startedAt: Date.now() - 60_000,

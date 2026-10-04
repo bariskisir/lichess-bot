@@ -35,7 +35,9 @@ Related production components, helpers, and SCSS live together in their feature 
 
 Game histories retain the initial FEN and full move sequence so engines can reason about repetition. Analysis is cancelled when the game position changes. Network retries and engine process failures stay within their owning adapter or worker.
 
-`ClockPriorityScheduling` picks the earliest current clock deadline whenever a worker becomes free. Game runners provide a live deadline callback for every search, including deeper evaluation and alternative verification. Equal deadlines and missing clocks retain arrival order; running work is not interrupted. `TurnDelay` uses a monotonic target created when a turn begins, so queued and active analysis time is deducted from artificial waiting. Recovering the same position preserves that target.
+`ClockPriorityScheduling` picks the earliest current clock deadline whenever a worker becomes free. Game runners provide a live deadline callback for every search, including deeper evaluation and alternative verification. Equal deadlines and missing clocks retain arrival order. Search cutoffs are separate from clock urgency, so a long game does not outrank an account whose clock is about to expire merely because its artificial delay is shorter.
+
+The `application/game/timing/` folder owns move timing. `calculateDynamicTurnBudget` is a pure policy for equal clock allocation, future increments, rolling move forecasts, and safety reserves. `TurnTiming` selects dynamic or random timing and updates it from authoritative clocks. `TurnDelay` measures elapsed time monotonically from the start of a turn, including connection and queued analysis. Recovering the same position preserves that target. `MoveSelectionBudget` bounds all search stages together and cancels exhausted queued work, retaining a legal fallback. Stockfish honors a separate live search cutoff with UCI time limits and can return partial analysis while retaining its worker.
 
 Configuration, password hashes, and history use serialized atomic JSON writes. Invalid persisted files fail explicitly instead of silently replacing user data.
 

@@ -17,7 +17,8 @@ import { Pulse, abortError, isAbort, retryDelay, sleep } from '../../shared/asyn
 import type { MoveSelector } from './move-selector.js';
 import type { DashboardStore } from '../dashboard/dashboard-store.js';
 import { clockEventSchema, moveEventSchema } from './game-events.js';
-import { TurnDelay } from './turn-delay.js';
+import { TurnTiming } from './timing/turn-timing.js';
+import type { TurnClock } from './timing/dynamic-turn-budget.js';
 
 interface PendingMove {
   ply: number;
@@ -42,7 +43,7 @@ export class GameRunner {
   private drawAt = 0;
   private flagAt = 0;
   private presenceRevision = 0;
-  private turnDelay?: TurnDelay;
+  private turnTiming?: TurnTiming;
 
   constructor(
     private readonly fullId: string,
@@ -53,8 +54,8 @@ export class GameRunner {
     private readonly managedUsers: ReadonlySet<string>,
     private readonly reporter: GameReporter | null,
     private readonly logger: Logger,
-    private readonly createDelay: (maximumMs: number) => TurnDelay = (maximumMs) =>
-      new TurnDelay(maximumMs),
+    private readonly createTiming: (getClock: () => TurnClock | null) => TurnTiming = (getClock) =>
+      new TurnTiming(settings, getClock),
   ) {
     this.channel = gateway.createChannel();
   }
@@ -173,12 +174,12 @@ export class GameRunner {
     this.snapshot = snapshot;
     const previousPosition = this.position?.key;
     this.position = new GamePosition(snapshot);
-    this.updateTurnDelay(previousPosition);
     this.channel.setVersion(snapshot.version);
     if (this.pending && this.position.ply > this.pending.ply) this.pending = undefined;
     this.refreshedAt = Date.now();
     this.needsRefresh = false;
     this.project(this.myTurn ? 'queued' : 'waiting');
+    this.updateTurnTiming(previousPosition);
   }
 
   private project(activity: GameActivity): void {
@@ -211,6 +212,7 @@ export class GameRunner {
         : 'Untimed',
       rated: snapshot.rated,
       activity,
+      delayUntil: null,
       status: snapshot.statusName,
       evaluation: this.view?.evaluation ?? null,
       startedAt: snapshot.createdAt,
@@ -220,10 +222,15 @@ export class GameRunner {
     this.reporter?.setGame(this.view);
   }
 
-  private activity(activity: GameActivity): void {
-    if (!this.view || this.view.activity === activity) return;
-    this.view = { ...this.view, activity };
-    this.reporter?.updateGame(this.view.id, { activity });
+  private activity(activity: GameActivity, delayUntil: number | null = null): void {
+    if (!this.view) return;
+    if (
+      this.view.activity === activity &&
+      Math.abs((this.view.delayUntil ?? 0) - (delayUntil ?? 0)) < 50
+    )
+      return;
+    this.view = { ...this.view, activity, delayUntil };
+    this.reporter?.updateGame(this.view.id, { activity, delayUntil });
   }
 
   private async play(signal: AbortSignal): Promise<void> {
@@ -232,7 +239,7 @@ export class GameRunner {
     const scope = AbortSignal.any([signal, operation.signal]);
     const position = this.position!;
     const key = position.key;
-    const delay = (this.turnDelay ??= this.createDelay(this.settings.randomDelayMaxMs));
+    const timing = (this.turnTiming ??= this.createTiming(this.turnClock));
     this.activity('queued');
     try {
       const move = await this.selector.select(
@@ -256,8 +263,11 @@ export class GameRunner {
         },
         () => this.activity('thinking'),
         this.analysisDeadline,
+        timing.remainingAnalysisMs,
       );
-      await delay.wait(scope, () => this.activity('delaying'));
+      await timing.wait(scope, (remainingMs) =>
+        this.activity('delaying', Date.now() + remainingMs),
+      );
       scope.throwIfAborted();
       if (
         this.needsRefresh ||
@@ -281,11 +291,35 @@ export class GameRunner {
     }
   }
 
-  private updateTurnDelay(previousPosition?: string): void {
-    if (!this.myTurn) this.turnDelay = undefined;
-    else if (!this.turnDelay || this.position!.key !== previousPosition)
-      this.turnDelay = this.createDelay(this.settings.randomDelayMaxMs);
+  private updateTurnTiming(previousPosition?: string): void {
+    if (!this.myTurn) this.turnTiming = undefined;
+    else if (!this.turnTiming || this.position!.key !== previousPosition)
+      this.turnTiming = this.createTiming(this.turnClock);
   }
+
+  private readonly turnClock = (): TurnClock | null => {
+    const clock = this.view?.clock;
+    const position = this.position;
+    const snapshot = this.snapshot;
+    if (!clock || !position || !snapshot?.clock) return null;
+    const elapsedMs = clock.running && this.myTurn ? Math.max(0, Date.now() - clock.updatedAt) : 0;
+    const phaseWeights = { p: 0, n: 1, b: 1, r: 2, q: 4, k: 0 } as const;
+    const material = position.chess
+      .board()
+      .flat()
+      .reduce((sum, piece) => sum + (piece ? phaseWeights[piece.type] : 0), 0);
+    return {
+      remainingMs: Math.max(0, clock[snapshot.color] * 1000 - elapsedMs),
+      initialMs: snapshot.clock.initial * 1000,
+      incrementMs: snapshot.clock.increment * 1000,
+      completedMoves:
+        snapshot.color === 'white' ? Math.ceil(position.ply / 2) : Math.floor(position.ply / 2),
+      materialPhase: Math.min(1, material / 24),
+      quietHalfMoves: Number(position.chess.fen().split(' ')[4]),
+      lagMs: this.channel.lagMs,
+      running: clock.running,
+    };
+  };
 
   private readonly analysisDeadline = (): number | null => {
     const view = this.view;
@@ -309,9 +343,7 @@ export class GameRunner {
         return;
       }
       try {
-        const previousPosition = this.position.key;
         this.position.apply(move.san, move.fen);
-        this.updateTurnDelay(previousPosition);
       } catch {
         this.invalidate();
         return;
@@ -323,6 +355,7 @@ export class GameRunner {
       if (move.clock && this.snapshot.clock)
         this.snapshot.clock = { ...this.snapshot.clock, ...move.clock, running: true };
       this.project(this.myTurn ? 'queued' : 'waiting');
+      this.updateTurnTiming();
     } else if (frame.t === 'ack') {
       if (this.pending && frame.d === this.pending.ack) this.pending.acknowledged = true;
     } else if (frame.t === 'clock') {
@@ -413,6 +446,7 @@ export class GameRunner {
       result,
       status: snapshot.statusName,
       activity: 'finished',
+      delayUntil: null,
       finishedAt: Date.now(),
       clock: this.view!.clock ? { ...this.view!.clock, running: false } : null,
     };

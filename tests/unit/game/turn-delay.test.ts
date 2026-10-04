@@ -12,14 +12,11 @@ describe('total turn delay', () => {
     'waits $expected ms after $elapsed ms of queue and analysis for a 3000 ms target',
     async ({ elapsed, expected }) => {
       let now = 100;
-      const wait = vi.fn(async () => {});
+      const wait = vi.fn(async (duration: number) => {
+        now += duration;
+      });
       const waiting = vi.fn();
-      const delay = new TurnDelay(
-        4000,
-        () => 0.75,
-        () => now,
-        wait,
-      );
+      const delay = new TurnDelay(3000, () => now, wait);
       now += elapsed;
       const signal = new AbortController().signal;
       await delay.wait(signal, waiting);
@@ -30,12 +27,7 @@ describe('total turn delay', () => {
   );
   it('does not wait when disabled and rejects already cancelled turns', async () => {
     const wait = vi.fn(async () => {});
-    const delay = new TurnDelay(
-      0,
-      () => 0.75,
-      () => 100,
-      wait,
-    );
+    const delay = new TurnDelay(0, () => 100, wait);
     await delay.wait(new AbortController().signal, vi.fn());
     const controller = new AbortController();
     controller.abort(abortError());

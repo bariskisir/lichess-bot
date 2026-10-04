@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { RESULT_HOLD_MS } from '../../../../../packages/contracts/src/index.js';
 import type {
   AccountView,
   ActivityView,
@@ -31,6 +32,7 @@ export class DashboardStore {
   private readonly listeners = new Set<(snapshot: DashboardSnapshot) => void>();
   private timer?: ReturnType<typeof setTimeout>;
   private readonly games = new Map<string, GameView>();
+  private readonly resultTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private history: GameView[] = [];
   private activity: ActivityView[] = [];
   private accounts: AccountView[] = [];
@@ -108,13 +110,34 @@ export class DashboardStore {
   finishGame(id: string): GameView | null {
     const game = this.games.get(id);
     if (!game || !game.result) return null;
+    if (this.resultTimers.has(id)) return game;
+    const remainingMs = Math.max(0, (game.finishedAt ?? Date.now()) + RESULT_HOLD_MS - Date.now());
+    const timer = setTimeout(() => {
+      this.resultTimers.delete(id);
+      this.archiveGame(id);
+    }, remainingMs);
+    timer.unref();
+    this.resultTimers.set(id, timer);
+    return game;
+  }
+  private archiveGame(id: string): void {
+    const game = this.games.get(id);
+    if (!game?.result) return;
     this.games.delete(id);
     this.history = [game, ...this.history.filter((item) => item.id !== id)].slice(
       0,
       this.settings.historyLimit,
     );
     this.publish();
-    return game;
+  }
+  clearHistory(): void {
+    this.history = [];
+    for (const [id, timer] of this.resultTimers) {
+      clearTimeout(timer);
+      this.games.delete(id);
+    }
+    this.resultTimers.clear();
+    this.publish();
   }
   restoreHistory(history: GameView[]): void {
     this.history = history.slice(0, this.settings.historyLimit);
@@ -143,6 +166,8 @@ export class DashboardStore {
   }
   close(): void {
     clearTimeout(this.timer);
+    for (const timer of this.resultTimers.values()) clearTimeout(timer);
+    this.resultTimers.clear();
     this.listeners.clear();
   }
 }

@@ -19,7 +19,8 @@ The application uses authenticated Lichess website sessions and its real-time pr
 | Concurrent games                  | 4                         |
 | Session game target               | 100                       |
 | Move selection                    | Balanced alternatives     |
-| Maximum total turn delay          | 1,000 ms                  |
+| Dynamic delay                     | Enabled                   |
+| Manual maximum total turn delay   | 1,000 ms (dynamic off)    |
 | Candidate variations              | 10                        |
 | Mistake probability               | 25%                       |
 | Retained advantage for mistakes   | 2 pawns                   |
@@ -35,6 +36,8 @@ The default selection is **1+0, 2+1, 3+0, 3+2, 5+0, 5+3**. The **10+0, 10+5, 15+
 The large engine selector offers **Stockfish 19 Lite**, **Stockfish 18 Lite**, and **Stockfish 17.1 Lite**. Version 19 is the default; earlier Lite distributions are explicit alternatives installed under npm aliases. They share the same UCI adapter, worker pool, and move-selection behavior.
 
 Defaults apply to new configurations and **Restore defaults**. Existing saved settings are retained. Finish a running session, or use **Stop now**, before editing bot settings and accounts. Dashboard password management stays available during a session.
+
+**Dynamic delay** also defaults to enabled when loading older configurations that do not contain this setting. It ignores and disables **Maximum delay**, retaining that value for manual mode. See [move timing](usage.md#move-timing) for clock allocation and time-pressure behavior.
 
 ## Dashboard password
 

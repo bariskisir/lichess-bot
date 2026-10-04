@@ -18,6 +18,8 @@ interface Search {
   request: AnalysisRequest;
   variations: Map<number, Variation>;
   abort: () => void;
+  stopped: boolean;
+  timed: boolean;
 }
 
 export class StockfishEngine implements ChessEngine {
@@ -28,6 +30,7 @@ export class StockfishEngine implements ChessEngine {
   private cleanup: Promise<void> = Promise.resolve();
   private startupTimer?: ReturnType<typeof setTimeout>;
   private progressTimer?: ReturnType<typeof setInterval>;
+  private searchTimer?: ReturnType<typeof setInterval>;
   private lastProgress = 0;
   private previousGame = '';
   private identified = false;
@@ -45,7 +48,9 @@ export class StockfishEngine implements ChessEngine {
     if (this.search) throw new Error('An engine worker can search only one position at a time.');
     const result = deferred<Analysis>();
     const abort = () => this.fail(abortError());
-    this.search = { result, request, variations: new Map(), abort };
+    const deadline = request.getSearchDeadline?.();
+    const timed = deadline !== null && deadline !== undefined;
+    this.search = { result, request, variations: new Map(), abort, stopped: false, timed };
     request.signal.addEventListener('abort', abort, { once: true });
     this.lastProgress = Date.now();
     this.progressTimer = setInterval(() => {
@@ -59,7 +64,24 @@ export class StockfishEngine implements ChessEngine {
       }
       this.send(`setoption name MultiPV value ${request.variations}`);
       this.send(positionCommand(request.position));
-      this.send(`go depth ${request.depth}`);
+      const moveTime = timed ? ` movetime ${Math.max(1, Math.floor(deadline - Date.now()))}` : '';
+      this.send(`go depth ${request.depth}${moveTime}`);
+      if (request.getSearchDeadline)
+        this.searchTimer = setInterval(() => {
+          const search = this.search;
+          const currentDeadline = search?.request.getSearchDeadline?.();
+          if (
+            search &&
+            !search.stopped &&
+            currentDeadline !== null &&
+            currentDeadline !== undefined &&
+            Date.now() >= currentDeadline
+          ) {
+            search.stopped = true;
+            search.timed = true;
+            this.send('stop');
+          }
+        }, 25);
     } catch (error) {
       this.fail(error instanceof Error ? error : new Error('Engine command failed.'));
     }
@@ -140,18 +162,20 @@ export class StockfishEngine implements ChessEngine {
     if (!line.startsWith('bestmove ')) return;
     this.search = undefined;
     clearInterval(this.progressTimer);
+    clearInterval(this.searchTimer);
     search.request.signal.removeEventListener('abort', search.abort);
     const bestMove = line.split(' ')[1] ?? '';
     const variations = [...search.variations.values()]
-      .filter((variation) => variation.depth >= search.request.depth)
+      .filter((variation) => search.timed || variation.depth >= search.request.depth)
       .sort((a, b) => a.index - b.index);
-    if (!/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(bestMove) || !variations.length)
+    if (!/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(bestMove) || (!variations.length && !search.timed))
       search.result.reject(new Error('Stockfish did not complete the requested search depth.'));
     else search.result.resolve({ bestMove, variations });
   }
 
   private fail(error: Error): void {
     clearInterval(this.progressTimer);
+    clearInterval(this.searchTimer);
     clearTimeout(this.startupTimer);
     const search = this.search;
     this.search = undefined;

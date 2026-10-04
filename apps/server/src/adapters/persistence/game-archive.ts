@@ -33,6 +33,7 @@ const archivedGameSchema = z.object({
   timeControl: z.string(),
   rated: z.boolean(),
   activity: z.literal('finished'),
+  delayUntil: z.null().default(null),
   status: z.string(),
   evaluation: z
     .object({
@@ -50,6 +51,7 @@ const archivedGameSchema = z.object({
 export class GameArchive {
   private readonly file: AtomicJsonFile<GameView[]>;
   private games: GameView[] = [];
+  private changes: Promise<void> = Promise.resolve();
   constructor(directory: string) {
     this.file = new AtomicJsonFile(join(directory, 'history.json'), (value) =>
       z.array(archivedGameSchema).parse(value),
@@ -59,11 +61,25 @@ export class GameArchive {
     this.games = await this.file.read([]);
     return this.games;
   }
-  async save(game: GameView, limit: number): Promise<void> {
-    this.games = [game, ...this.games.filter((item) => item.id !== game.id)].slice(0, limit);
-    await this.file.write(this.games);
+  save(game: GameView, limit: number): Promise<void> {
+    return this.replace((games) =>
+      [game, ...games.filter((item) => item.id !== game.id)].slice(0, limit),
+    );
   }
   async flush(): Promise<void> {
+    await this.changes;
     await this.file.flush();
+  }
+  clear(): Promise<void> {
+    return this.replace(() => []);
+  }
+  private replace(next: (games: GameView[]) => GameView[]): Promise<void> {
+    const task = this.changes.then(async () => {
+      const games = next(this.games);
+      await this.file.write(games);
+      this.games = games;
+    });
+    this.changes = task.catch(() => {});
+    return task;
   }
 }

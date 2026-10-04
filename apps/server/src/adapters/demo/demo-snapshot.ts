@@ -88,6 +88,7 @@ export function createDemoSnapshot(): DashboardSnapshot {
       timeControl: index % 2 ? '5+3' : '3+2',
       rated: true,
       activity: index === 0 ? 'thinking' : index === 3 ? 'queued' : 'waiting',
+      delayUntil: null,
       status: 'started',
       evaluation: {
         score: [0.34, -0.72, 1.26, 0.12, -0.21, 0.58][index]!,

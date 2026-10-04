@@ -23,6 +23,8 @@ export interface AnalysisRequest {
   onInfo?: (variation: Variation) => void;
   onStarted?: () => void;
   getDeadline?: () => number | null;
+  /** A live search cutoff, independent of the clock expiry used for queue priority. */
+  getSearchDeadline?: () => number | null;
 }
 export interface ChessEngine {
   analyze(request: AnalysisRequest): Promise<Analysis>;

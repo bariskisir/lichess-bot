@@ -25,6 +25,7 @@ async function createRuntime(gateways: FakeGateway[], target = 1) {
     save: vi.fn(async () => {}),
     load: vi.fn(async () => []),
     flush: vi.fn(async () => {}),
+    clear: vi.fn(async () => {}),
   };
   const runtime = new BotRuntime(
     config,

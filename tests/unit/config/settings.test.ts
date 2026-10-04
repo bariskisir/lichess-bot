@@ -21,11 +21,18 @@ describe('shared validation', () => {
       maxConcurrentGames: 4,
       movePolicy: 'balanced',
       randomDelayMaxMs: 1000,
+      dynamicDelay: true,
       variations: 10,
       mistakeProbability: 25,
     });
     expect(DEFAULT_SETTINGS.gameTypes).toEqual([...DEFAULT_POOLS]);
     expect(DEFAULT_SETTINGS.gameTypes).toContain('5+0');
+  });
+  it('enables dynamic delay for older saved settings while preserving an explicit opt-out', () => {
+    const { dynamicDelay: _dynamicDelay, ...legacy } = DEFAULT_SETTINGS;
+    expect(settingsSchema.parse(legacy).dynamicDelay).toBe(true);
+    expect(settingsSchema.parse({ ...legacy, dynamicDelay: false }).dynamicDelay).toBe(false);
+    expect(settingsSchema.safeParse({ dynamicDelay: 'true' }).success).toBe(false);
   });
   it('normalizes the session value and rejects full cookie strings and line breaks', () => {
     expect(

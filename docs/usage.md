@@ -28,7 +28,13 @@ Game cards put the complete board first, with compact player and clock details a
 
 ## History and inspection
 
-**Recently finished** shows up to six completed games as a grid of smaller boards. **History** uses the same board grid for all retained games, with search and result filters. Select a board to open its game inspector, replay moves, or export PGN. Lichess links use public game identifiers rather than private player URLs.
+At the end of a game, the live board shows **Victory**, **Defeat**, **Draw**, or **Aborted** with its score for three seconds. A short entrance and countdown mark the result before the board moves into completed games. Reduced motion keeps the result visible without movement. Results are saved immediately; the display hold does not occupy an engine worker or reserve a game slot.
+
+**Recently finished** shows up to six completed games as a grid of smaller boards. **History** uses the same board grid for all retained games, with search and result filters. Completed boards are static and do not open an inspector. Ongoing boards still open their inspector for move navigation and PGN export. Lichess game and player links remain available.
+
+In **History**, select **Clear history** and **Confirm clear** to remove all saved games, including results currently in their three-second hold. Ongoing games and session counters continue unchanged. New games completed after the reset are retained. The preview cannot clear your saved history.
+
+The **Delaying** status shows the remaining artificial wait with one decimal, such as **1.3s**. The countdown updates independently of engine analysis; the engine worker is available to other games throughout this wait.
 
 ## Move selection
 
@@ -38,9 +44,21 @@ Game cards put the complete board first, with compact player and clock details a
 
 Clocks, position updates, and accepted moves come from Lichess. The board does not advance optimistically when a move is sent. Disconnections trigger retry and position recovery; stale analysis is cancelled before a changed position is played.
 
-Queued engine searches prioritize the account with the earliest clock expiry. Clock updates are checked again whenever a worker becomes available; equal deadlines retain arrival order. An already running search is allowed to finish.
+## Move timing
 
-**Maximum delay** sets a random total target from the moment the application receives your turn. Queue waiting, connection setup, candidate search, and deeper evaluation all count toward this target. For a 3-second target and 2 seconds already elapsed, only 1 second remains to wait. If analysis exceeds the target, the move is sent immediately after analysis. Set the maximum to 0 to disable artificial waiting.
+Queued engine searches prioritize the account with the earliest clock expiry. Clock updates are checked again whenever a worker becomes available; equal deadlines retain arrival order. Each running search respects its own analysis budget.
+
+**Dynamic delay** is enabled by default and ignores **Maximum delay**. It starts by planning for 40 moves per side and divides the available clock across the estimated remaining moves. Every time control uses its actual initial time and increment; no pool-specific durations are hard-coded.
+
+The allocation is `(remaining time − reserve + increment × (remaining moves − 1)) / remaining moves`. Future increments help plan the whole game, but a separate safety cap prevents spending time that is not on the current clock. The reserve covers network lag and leaves clock time for the end of the game.
+
+As play progresses, a rolling forecast uses remaining material and the halfmove clock to allow for longer games. Substantial material or prolonged play without a capture or pawn move extends the forecast before move 40; the forecast always keeps at least eight moves ahead. Passing move 40 never consumes the remaining clock in one turn. Clock updates adjust the current target without resetting elapsed time.
+
+Queue waiting, connection setup, candidate search, evaluation, and verification all count toward the same total turn target. Only the unused portion becomes artificial waiting. In time trouble, artificial waiting disappears and analysis is shortened. Stockfish can return its current result before the requested depth; optional deeper searches stop when the budget is exhausted. If the budget expires while work is queued or stalled, the application cancels that work and submits the last legal root candidate, or a legal emergency move if no engine candidate is available. An external interruption or changed position always cancels the move instead.
+
+This manages local time use conservatively; a frozen computer or lost connection can still prevent a move reaching Lichess before the clock expires.
+
+With **Dynamic delay** off, **Maximum delay** sets a random total target from the moment the application receives your turn. For a 3-second target and 2 seconds already elapsed, only 1 second remains to wait. If analysis exceeds the target, the move is sent immediately after analysis. Set the maximum to 0 to disable artificial waiting. Clock safety still takes precedence in time trouble.
 
 ## Themes and preview
 

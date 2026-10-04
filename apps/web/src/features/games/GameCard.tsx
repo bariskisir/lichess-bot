@@ -4,7 +4,9 @@ import { Chessboard } from './Chessboard.js';
 import { Clock } from './Clock.js';
 import { Evaluation } from './Evaluation.js';
 import { resultColor } from './game-result.js';
-import { timeAgo, titleCase } from '../../shared/format.js';
+import { timeAgo } from '../../shared/format.js';
+import { GameState } from './GameState.js';
+import { GameResultOverlay } from './GameResultOverlay.js';
 import './game-card.scss';
 
 function Player({
@@ -86,9 +88,7 @@ export const GameCard = memo(function GameCard({
             </a>
           )}
         </div>
-        <span className={`game-state game-state--${game.result ?? game.activity}`}>
-          {titleCase(game.result ?? game.activity)}
-        </span>
+        <GameState game={game} />
       </div>
       <div className="game-card__player">
         <Player player={game[top]} own={top === game.color} linkProfile={!sample} />
@@ -111,11 +111,14 @@ export const GameCard = memo(function GameCard({
             check={game.check}
             coordinates={!compact}
           />
-          <button
-            className="game-card__inspect"
-            onClick={() => onInspect(game)}
-            aria-label={`Inspect game ${game.id}`}
-          />
+          {!game.result && (
+            <button
+              className="game-card__inspect"
+              onClick={() => onInspect(game)}
+              aria-label={`Inspect game ${game.id}`}
+            />
+          )}
+          {!compact && game.result && <GameResultOverlay game={{ ...game, result: game.result }} />}
         </div>
       </div>
       <div className="game-card__player game-card__player--bottom">

@@ -203,6 +203,15 @@ export class DashboardHttpServer {
       this.json(response, 202, { ok: true });
       return;
     }
+    if (path === '/api/history' && method === 'DELETE') {
+      await this.mutate(async () => {
+        if (!this.auth.authorized(token))
+          throw new AuthenticationFailure('Sign in to access the dashboard.');
+        await this.runtime.clearHistory();
+      });
+      this.json(response, 200, { ok: true });
+      return;
+    }
     if (path === '/api/settings' && method === 'PUT') {
       const input = await this.body(request);
       await this.mutate(async () => {

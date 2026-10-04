@@ -3,13 +3,17 @@ import { Search } from 'lucide-react';
 import type { GameView } from '../../../../../packages/contracts/src/index.js';
 import { FinishedGamesGrid } from './FinishedGamesGrid.js';
 import { EmptyState } from '../../shared/ui/EmptyState.js';
+import { ClearHistoryAction } from './ClearHistoryAction.js';
+import './history-page.scss';
 
 export function HistoryPage({
   games,
   onInspect,
+  demo,
 }: {
   games: GameView[];
   onInspect: (game: GameView) => void;
+  demo: boolean;
 }) {
   const [query, setQuery] = useState('');
   const [result, setResult] = useState('all');
@@ -21,13 +25,22 @@ export function HistoryPage({
         .includes(query.toLowerCase()),
   );
   return (
-    <section className="page-section">
+    <section className="page-section history-page">
       <div className="section-heading">
         <div>
           <h2>Game history</h2>
           <p>Completed games, saved on this machine.</p>
         </div>
-        <span className="muted">{games.length} games</span>
+        <div className="history-page__actions">
+          <span className="muted">{games.length} games</span>
+          <ClearHistoryAction
+            disabled={demo || !games.length}
+            onCleared={() => {
+              setQuery('');
+              setResult('all');
+            }}
+          />
+        </div>
       </div>
       <div className="filter-bar">
         <label className="search-input">
@@ -58,7 +71,7 @@ export function HistoryPage({
           description={
             games.length
               ? 'Try another player name or select all results.'
-              : 'After a game ends, you can review every move and export its PGN.'
+              : 'Completed boards and results are kept here until you clear history.'
           }
         />
       )}

@@ -1,23 +1,37 @@
 import { sleep } from '../../shared/async.js';
 
-/** A turn's random target includes all elapsed queue, connection, and analysis time. */
+/** A turn's total target includes all elapsed queue, connection, and analysis time. */
 export class TurnDelay {
-  private readonly deadline: number;
+  private readonly startedAt: number;
 
   constructor(
-    maximumMs: number,
-    random: () => number = Math.random,
+    private readonly targetMs: number | ((elapsedMs: number) => number),
     private readonly now: () => number = () => performance.now(),
     private readonly waitFor: typeof sleep = sleep,
   ) {
-    this.deadline = this.now() + Math.floor(random() * (maximumMs + 1));
+    this.startedAt = this.now();
   }
 
-  async wait(signal: AbortSignal, onWaiting: () => void): Promise<void> {
-    signal.throwIfAborted();
-    const remaining = Math.max(0, this.deadline - this.now());
-    if (!remaining) return;
-    onWaiting();
-    await this.waitFor(remaining, signal);
+  get elapsedMs(): number {
+    return Math.max(0, this.now() - this.startedAt);
+  }
+
+  get remainingMs(): number {
+    const elapsed = this.elapsedMs;
+    const target = typeof this.targetMs === 'number' ? this.targetMs : this.targetMs(elapsed);
+    return Math.max(0, target - elapsed);
+  }
+
+  async wait(signal: AbortSignal, onWaiting: (remainingMs: number) => void): Promise<void> {
+    while (true) {
+      signal.throwIfAborted();
+      const remaining = this.remainingMs;
+      if (!remaining) return;
+      onWaiting(remaining);
+      await this.waitFor(
+        typeof this.targetMs === 'number' ? remaining : Math.min(100, remaining),
+        signal,
+      );
+    }
   }
 }

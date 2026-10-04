@@ -9,7 +9,7 @@ import { BotRuntime } from '../../../apps/server/src/application/runtime/bot-run
 import { EngineRegistry } from '../../../apps/server/src/application/engine/engine-registry.js';
 import { GameArchive } from '../../../apps/server/src/adapters/persistence/game-archive.js';
 import { DashboardHttpServer } from '../../../apps/server/src/adapters/http/http-server.js';
-import { memoryConfig, FakeGateway } from '../../fixtures/server.js';
+import { memoryConfig, FakeGateway, archivedGame } from '../../fixtures/server.js';
 import { AuthenticationService } from '../../../apps/server/src/application/auth/authentication-service.js';
 import { JsonAuthenticationRepository } from '../../../apps/server/src/adapters/auth/json-authentication-repository.js';
 import { ScryptPasswordHasher } from '../../../apps/server/src/adapters/auth/scrypt-password-hasher.js';
@@ -64,11 +64,36 @@ async function application() {
     await server.close();
     store.close();
   });
-  return { url: `http://127.0.0.1:${server.port}`, gateway, directory };
+  return { url: `http://127.0.0.1:${server.port}`, gateway, directory, store, archive };
 }
 const mutationHeaders = { 'Content-Type': 'application/json', 'X-Lichess-Bot': 'dashboard' };
 
 describe('dashboard API boundaries', () => {
+  it('clears saved history through the API while retaining ongoing games and counters', async () => {
+    const app = await application();
+    const game = archivedGame();
+    await app.archive.save(game, 200);
+    app.store.restoreHistory([game]);
+    const ongoing = {
+      ...game,
+      id: 'ongoing1',
+      activity: 'waiting' as const,
+      result: null,
+      finishedAt: null,
+    };
+    app.store.setGame(ongoing);
+    app.store.setRuntime({ wins: 2, completed: 3, active: 1 });
+    expect((await fetch(`${app.url}/api/history`, { method: 'DELETE' })).status).toBe(403);
+    const response = await fetch(`${app.url}/api/history`, {
+      method: 'DELETE',
+      headers: mutationHeaders,
+    });
+    expect(response.status).toBe(200);
+    expect(app.store.snapshot().history).toEqual([]);
+    expect(app.store.snapshot().games).toEqual([ongoing]);
+    expect(app.store.snapshot().runtime).toMatchObject({ wins: 2, completed: 3, active: 1 });
+    expect(await new GameArchive(app.directory).load()).toEqual([]);
+  });
   it('opens without a password, then protects the APIs and supports password rotation and removal', async () => {
     const app = await application();
     const request = (path: string, method = 'GET', body?: unknown, cookie = '') =>
@@ -89,6 +114,7 @@ describe('dashboard API boundaries', () => {
     expect((await request('snapshot')).status).toBe(401);
     expect((await request('events')).status).toBe(401);
     expect((await request('configuration')).status).toBe(401);
+    expect((await request('history', 'DELETE')).status).toBe(401);
     expect((await request('snapshot', 'GET', undefined, firstCookie)).status).toBe(200);
     const stored = await readFile(join(app.directory, 'dashboard-auth.json'), 'utf8');
     expect(stored).toContain('scrypt');

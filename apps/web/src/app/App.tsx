@@ -159,7 +159,9 @@ export function App() {
                 />
               </>
             )}
-            {view === 'history' && <HistoryPage games={snapshot.history} onInspect={inspect} />}
+            {view === 'history' && (
+              <HistoryPage games={snapshot.history} onInspect={inspect} demo={snapshot.demo} />
+            )}
             {view === 'accounts' && (
               <AccountsPage accounts={snapshot.accounts} editable={editable} demo={snapshot.demo} />
             )}

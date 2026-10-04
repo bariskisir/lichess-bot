@@ -6,6 +6,7 @@ export type RuntimePhase =
 export type GameActivity =
   'recovering' | 'queued' | 'thinking' | 'delaying' | 'confirming' | 'waiting' | 'finished';
 export type GameResult = 'win' | 'loss' | 'draw' | 'aborted';
+export const RESULT_HOLD_MS = 3000;
 
 export interface PlayerView {
   id: string;
@@ -38,6 +39,7 @@ export interface GameView {
   timeControl: string;
   rated: boolean;
   activity: GameActivity;
+  delayUntil: number | null;
   status: string;
   evaluation: EvaluationView | null;
   startedAt: number;

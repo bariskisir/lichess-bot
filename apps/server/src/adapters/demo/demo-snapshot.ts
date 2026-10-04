@@ -130,7 +130,7 @@ export function createDemoSnapshot(): DashboardSnapshot {
     },
     engine: {
       id: DEFAULT_SETTINGS.engineId,
-      name: 'Stockfish 19 Lite',
+      name: 'Lozza 2',
       workers: 2,
       busy: 1,
       queued: 1,

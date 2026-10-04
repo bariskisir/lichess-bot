@@ -9,5 +9,11 @@
     "typescript/no-explicit-any": "error",
     "jsx-a11y/prefer-tag-over-role": "off"
   },
-  "ignorePatterns": ["dist", "node_modules", ".agents", ".impeccable"]
+  "ignorePatterns": [
+    "dist",
+    "node_modules",
+    ".agents",
+    ".impeccable",
+    "apps/server/src/adapters/engines/lozza/vendor"
+  ]
 }

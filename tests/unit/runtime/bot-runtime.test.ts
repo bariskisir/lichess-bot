@@ -20,7 +20,7 @@ async function createRuntime(gateways: FakeGateway[], target = 1) {
   const store = new DashboardStore(config.settings);
   const registry = new EngineRegistry();
   const create = vi.fn(() => ({ analyze: vi.fn(), close: vi.fn(async () => {}) }));
-  registry.register({ id: 'stockfish-19-lite-local', name: 'Fake local engine', create });
+  registry.register({ id: DEFAULT_SETTINGS.engineId, name: 'Fake local engine', create });
   const archive = {
     save: vi.fn(async () => {}),
     load: vi.fn(async () => []),

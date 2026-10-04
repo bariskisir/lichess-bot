@@ -29,7 +29,7 @@ async function application() {
   const gateway = vi.fn(() => new FakeGateway());
   const registry = new EngineRegistry();
   registry.register({
-    id: 'stockfish-19-lite-local',
+    id: config.settings.engineId,
     name: 'Test engine',
     create: () => {
       throw new Error('No games should be started.');

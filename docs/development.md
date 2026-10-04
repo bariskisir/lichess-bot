@@ -23,7 +23,7 @@ npx playwright install chromium
 
 ## Tests
 
-All test files are under `tests/`; production source folders contain no tests. Unit and integration tests cover validation, game history, move confirmation, cancellation, engine queues, Stockfish execution, session budgets, runtime recovery, persistence, HTTP boundaries, and authentication.
+All test files are under `tests/`; production source folders contain no tests. Unit and integration tests cover validation, game history, move confirmation, cancellation, engine queues, real Stockfish and Lozza execution, session budgets, runtime recovery, persistence, HTTP boundaries, and authentication. Engine tests include legal coordinate PVs, timed results, cancellation, and recovery; Lozza tests also cover mate, promotion, and sole legal moves.
 
 Browser tests use local sample data. They check themes, game replay and PGN export, settings, full-board expansion, and responsive widths down to 320 px. The browser server uses a separate port and a test-specific data directory. Verification does not create real Lichess games.
 
@@ -35,6 +35,8 @@ Inject dependencies through constructors. Keep account credentials, private game
 
 ## Dependencies
 
-`package-lock.json` pins the installed dependency tree. Use `npm ci` for reproducible installations. Check `npm outdated` when updating packages and run `npm run verify` after changes. The main Stockfish dependency is version 19. The `stockfish-18` and `stockfish-17` aliases deliberately preserve earlier engine distributions; an outdated report for those aliases does not mean they should be upgraded to version 19.
+`package-lock.json` pins the installed dependency tree. Use `npm ci` for reproducible installations. Check `npm outdated` when updating packages and run `npm run verify` after changes. The main `stockfish` dependency is version 19; `stockfish-10` pins `stockfish@10.0.2` under an npm alias and must retain that engine version.
+
+Lozza's unchanged sources and accompanying upstream notices are vendored from [Lozza 2.0](https://github.com/namanthanki/lozza/tree/3c222b28b76e0e3dc3e5fa417e8aae15642dc114) and [Lozza 5](https://github.com/namanthanki/lozza/tree/3ef2967740e7e1103078531b8b83eb49ceff3b2a). Update the pinned sources rather than editing them. `scripts/copy-engine-assets.ts` includes these assets in compiled server builds.
 
 Impeccable is installed at `.agents/skills/impeccable/`. Product context is recorded in `PRODUCT.md`, with the dashboard surface brief under `.impeccable/surfaces/`.

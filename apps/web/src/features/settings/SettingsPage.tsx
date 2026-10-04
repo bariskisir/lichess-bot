@@ -153,7 +153,7 @@ export function SettingsPage({
                 'Hash per worker (MB)',
                 16,
                 512,
-                'Memory allocated to each engine.',
+                'Stockfish 19 memory; Stockfish 10 uses 16 MB and Lozza uses its built-in hash.',
               )}
             </div>
           </div>

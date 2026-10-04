@@ -1,9 +1,12 @@
 import type { EngineFactory } from '../../domain/engine/engine.js';
+import type { EngineOption } from '../../../../../packages/contracts/src/index.js';
 
 export class EngineRegistry {
   private readonly factories = new Map<string, EngineFactory>();
-  list(): { id: string; name: string }[] {
-    return [...this.factories.values()].map(({ id, name }) => ({ id, name }));
+  list(): EngineOption[] {
+    return [...this.factories.values()]
+      .map(({ id, name, elo }) => ({ id, name, ...(elo === undefined ? {} : { elo }) }))
+      .sort((left, right) => (left.elo ?? Infinity) - (right.elo ?? Infinity));
   }
   register(factory: EngineFactory): void {
     if (this.factories.has(factory.id))

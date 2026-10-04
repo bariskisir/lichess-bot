@@ -7,6 +7,8 @@ import { DashboardStore } from './application/dashboard/dashboard-store.js';
 import { EngineRegistry } from './application/engine/engine-registry.js';
 import { StockfishEngine } from './adapters/engines/stockfish/stockfish-engine.js';
 import { STOCKFISH_DISTRIBUTIONS } from './adapters/engines/stockfish/stockfish-distributions.js';
+import { LozzaEngine } from './adapters/engines/lozza/lozza-engine.js';
+import { LOZZA_DISTRIBUTIONS } from './adapters/engines/lozza/lozza-distributions.js';
 import { WebLichessGateway } from './adapters/lichess/web-gateway.js';
 import { GameArchive } from './adapters/persistence/game-archive.js';
 import { JsonConfigurationRepository } from './adapters/persistence/json-configuration-repository.js';
@@ -39,7 +41,15 @@ for (const distribution of STOCKFISH_DISTRIBUTIONS)
   engines.register({
     id: distribution.id,
     name: distribution.name,
+    elo: distribution.elo,
     create: () => new StockfishEngine(config.settings.hashMb, logger, distribution),
+  });
+for (const distribution of LOZZA_DISTRIBUTIONS)
+  engines.register({
+    id: distribution.id,
+    name: distribution.name,
+    elo: distribution.elo,
+    create: () => new LozzaEngine(logger, distribution),
   });
 const runtime = new BotRuntime(
   config,

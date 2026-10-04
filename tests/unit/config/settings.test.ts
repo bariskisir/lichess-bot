@@ -15,6 +15,7 @@ describe('shared validation', () => {
   });
   it('starts with the requested operating defaults and shorter pools selected', () => {
     expect(DEFAULT_SETTINGS).toMatchObject({
+      engineId: 'lozza-2-local',
       depth: 7,
       evaluationDepth: 15,
       maxEngines: 3,
@@ -27,6 +28,19 @@ describe('shared validation', () => {
     });
     expect(DEFAULT_SETTINGS.gameTypes).toEqual([...DEFAULT_POOLS]);
     expect(DEFAULT_SETTINGS.gameTypes).toContain('5+0');
+  });
+  it('migrates retired engines to Lozza 2 and preserves available selections', () => {
+    for (const engineId of ['stockfish-17-lite-local', 'stockfish-18-lite-local']) {
+      expect(settingsSchema.parse({ engineId }).engineId).toBe('lozza-2-local');
+    }
+    for (const engineId of [
+      'lozza-2-local',
+      'lozza-5-local',
+      'stockfish-10-local',
+      'stockfish-19-lite-local',
+    ]) {
+      expect(settingsSchema.parse({ engineId }).engineId).toBe(engineId);
+    }
   });
   it('enables dynamic delay for older saved settings while preserving an explicit opt-out', () => {
     const { dynamicDelay: _dynamicDelay, ...legacy } = DEFAULT_SETTINGS;

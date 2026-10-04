@@ -6,6 +6,7 @@ export const DEFAULT_USER_AGENT =
 export interface EngineOption {
   id: string;
   name: string;
+  elo?: number;
 }
 
 export const SUPPORTED_POOLS = [
@@ -30,7 +31,10 @@ export const settingsSchema = z.object({
     .min(1)
     .max(100)
     .regex(/^[a-z\d-]+$/)
-    .default('stockfish-19-lite-local'),
+    .default('lozza-2-local')
+    .transform((id) =>
+      ['stockfish-17-lite-local', 'stockfish-18-lite-local'].includes(id) ? 'lozza-2-local' : id,
+    ),
   userAgent: z
     .string()
     .min(1)

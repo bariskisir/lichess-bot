@@ -134,7 +134,7 @@ export function Sidebar({
           )}
           <div className="sidebar__engine">
             <span className="status-dot status-dot--connected" />
-            <span>{engine?.name ?? 'Stockfish 19 Lite'}</span>
+            <span>{engine?.name ?? 'Lozza 2'}</span>
           </div>
           <p>
             {engine ? `${engine.workers} workers · ${engine.queued} queued` : 'Engine installed'}

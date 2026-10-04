@@ -1,6 +1,6 @@
 {
   "name": "lichess-bot",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "tsx watch apps/server/src/main.ts --development",
-    "build": "tsx scripts/clean-build.ts && tsc -p apps/server/tsconfig.build.json && vite build --config apps/web/vite.config.ts",
+    "build": "tsx scripts/clean-build.ts && tsc -p apps/server/tsconfig.build.json && tsx scripts/copy-engine-assets.ts && vite build --config apps/web/vite.config.ts",
     "start": "node dist/apps/server/src/main.js",
     "check": "tsc --noEmit && oxlint --deny-warnings apps packages tests scripts",
     "test": "vitest run",
@@ -27,8 +27,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "stockfish": "19.0.0",
-    "stockfish-17": "npm:stockfish@17.1.0",
-    "stockfish-18": "npm:stockfish@18.0.8",
+    "stockfish-10": "npm:stockfish@10.0.2",
     "ws": "8.22.0",
     "zod": "4.6.5"
   },

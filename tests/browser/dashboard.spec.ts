@@ -118,7 +118,7 @@ test('mobile navigation reaches engine selection and preview stays read-only', a
     current === 'dark' ? 'light' : 'dark',
   );
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
-  await expect(page.locator('.engine-identity__details strong')).toHaveText('Stockfish 19 Lite');
+  await expect(page.locator('.engine-identity__details strong')).toHaveText('Lozza 2 · 2554');
   await expect(page.getByRole('button', { name: 'Engine', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Save settings' })).toBeDisabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -188,11 +188,11 @@ test('settings expose the requested defaults and dashboard passwords can be set,
     await engine.click();
     await expect(
       page.getByRole('listbox', { name: 'Chess engines' }).getByRole('option'),
-    ).toHaveCount(3);
-    await page.getByRole('option', { name: 'Stockfish 18 Lite', exact: true }).click();
-    await expect(page.locator('.engine-identity__details strong')).toHaveText('Stockfish 18 Lite');
+    ).toHaveCount(4);
+    await page.getByRole('option', { name: 'Lozza 5 · 3071', exact: true }).click();
+    await expect(page.locator('.engine-identity__details strong')).toHaveText('Lozza 5 · 3071');
     await engine.click();
-    await page.getByRole('option', { name: 'Stockfish 19 Lite', exact: true }).click();
+    await page.getByRole('option', { name: 'Lozza 2 · 2554', exact: true }).click();
     await expect(page.getByLabel('User-Agent', { exact: true })).not.toHaveValue(/lichess-bot/);
     await expect(page.getByText('No password is set.', { exact: false })).toBeVisible();
     await page.getByLabel('Dashboard password', { exact: true }).fill(password);
@@ -227,5 +227,52 @@ test('settings expose the requested defaults and dashboard passwords can be set,
         headers: { 'X-Lichess-Bot': 'dashboard' },
         data: { password: null, currentPassword: password },
       });
+  }
+});
+
+test('the engine selector orders reference ratings and persists every available engine', async ({
+  page,
+  request,
+}) => {
+  const configuration = await (await request.get('/api/configuration')).json();
+  const headers = { 'X-Lichess-Bot': 'dashboard' };
+  const engines = [
+    { id: 'lozza-2-local', name: 'Lozza 2', elo: 2554 },
+    { id: 'lozza-5-local', name: 'Lozza 5', elo: 3071 },
+    { id: 'stockfish-10-local', name: 'Stockfish 10', elo: 3447 },
+    { id: 'stockfish-19-lite-local', name: 'Stockfish 19 Lite', elo: 3792 },
+  ];
+  expect(configuration.engines).toEqual(engines);
+  try {
+    await page.goto('/#settings');
+    const trigger = page.getByRole('button', { name: 'Engine', exact: true });
+    const selected = page.locator('.engine-identity__details strong');
+    for (const engine of engines) {
+      await trigger.click();
+      const options = page.getByRole('listbox', { name: 'Chess engines' }).getByRole('option');
+      await expect(options).toHaveText(engines.map((option) => `${option.name} · ${option.elo}`));
+      const label = `${engine.name} · ${engine.elo}`;
+      await page.getByRole('option', { name: label, exact: true }).click();
+      await expect(selected).toHaveText(label);
+      const save = page.getByRole('button', { name: 'Save settings', exact: true });
+      if (await save.isEnabled()) {
+        await save.click();
+        await expect(page.getByText('Settings saved', { exact: true })).toBeVisible();
+      }
+      await page.reload();
+      await expect(selected).toHaveText(label);
+      expect((await (await request.get('/api/configuration')).json()).settings.engineId).toBe(
+        engine.id,
+      );
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(selected).toHaveText('Stockfish 19 Lite · 3792');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  } finally {
+    expect(
+      (await request.put('/api/settings', { headers, data: configuration.settings })).ok(),
+    ).toBe(true);
   }
 });

@@ -10,32 +10,43 @@ The application uses authenticated Lichess website sessions and its real-time pr
 
 ## Default settings
 
-| Setting                           | Default                   |
-| --------------------------------- | ------------------------- |
-| Engine                            | `stockfish-19-lite-local` |
-| Depth                             | 7                         |
-| Evaluation depth                  | 15                        |
-| Engine workers                    | 3                         |
-| Concurrent games                  | 4                         |
-| Session game target               | 100                       |
-| Move selection                    | Balanced alternatives     |
-| Dynamic delay                     | Enabled                   |
-| Manual maximum total turn delay   | 1,000 ms (dynamic off)    |
-| Candidate variations              | 10                        |
-| Mistake probability               | 25%                       |
-| Retained advantage for mistakes   | 2 pawns                   |
-| Hash per worker                   | 64 MB                     |
-| Saved games                       | 200                       |
-| Draw between managed accounts     | Enabled                   |
-| Claim victory for absent opponent | Enabled                   |
-| Lichess request attempts          | 3 total attempts          |
-| Retry interval                    | 1,000 ms                  |
+| Setting                           | Default                |
+| --------------------------------- | ---------------------- |
+| Engine                            | `lozza-2-local`        |
+| Depth                             | 7                      |
+| Evaluation depth                  | 15                     |
+| Engine workers                    | 3                      |
+| Concurrent games                  | 4                      |
+| Session game target               | 100                    |
+| Move selection                    | Balanced alternatives  |
+| Dynamic delay                     | Enabled                |
+| Manual maximum total turn delay   | 1,000 ms (dynamic off) |
+| Candidate variations              | 10                     |
+| Mistake probability               | 25%                    |
+| Retained advantage for mistakes   | 2 pawns                |
+| Hash per worker                   | 64 MB                  |
+| Saved games                       | 200                    |
+| Draw between managed accounts     | Enabled                |
+| Claim victory for absent opponent | Enabled                |
+| Lichess request attempts          | 3 total attempts       |
+| Retry interval                    | 1,000 ms               |
 
 The default selection is **1+0, 2+1, 3+0, 3+2, 5+0, 5+3**. The **10+0, 10+5, 15+10, 30+0, 30+20** pools remain available but start unselected. Only standard, real-time chess is supported.
 
-The large engine selector offers **Stockfish 19 Lite**, **Stockfish 18 Lite**, and **Stockfish 17.1 Lite**. Version 19 is the default; earlier Lite distributions are explicit alternatives installed under npm aliases. They share the same UCI adapter, worker pool, and move-selection behavior.
+The engine selector uses the same names and reference ratings as ChessBot, in ascending order:
 
-Defaults apply to new configurations and **Restore defaults**. Existing saved settings are retained. Finish a running session, or use **Stop now**, before editing bot settings and accounts. Dashboard password management stays available during a session.
+| Engine            | Reference rating |
+| ----------------- | ---------------- |
+| Lozza 2 (default) | 2554             |
+| Lozza 5           | 3071             |
+| Stockfish 10      | 3447             |
+| Stockfish 19 Lite | 3792             |
+
+Lozza and Stockfish 19 use [CCRL Blitz](https://computerchess.org.uk/404/rating_list_all.html); Stockfish 10 uses its [CCRL 40/15 reference from 2024-11-16](https://www.computerchess.org/cgi/engine_details.cgi?eng=Stockfish+10+64-bit&print=Details+%28text%29). Stockfish 19 Lite displays the full engine's rating as a reference. These pools differ, and the numbers do not measure this application's configured depth or time budget. Stockfish 10 has no separate Lite edition.
+
+All four engines run locally and share the worker pool and move-selection policy. Stockfish 10 uses a fixed 16 MB hash; Lozza uses its built-in hash. The hash setting applies to Stockfish 19 Lite.
+
+Defaults apply to new configurations and **Restore defaults**. Existing saved settings are retained; removed Stockfish 17.1 and 18 selections resolve to Lozza 2. Finish a running session, or use **Stop now**, before editing bot settings and accounts. Dashboard password management stays available during a session.
 
 **Dynamic delay** also defaults to enabled when loading older configurations that do not contain this setting. It ignores and disables **Maximum delay**, retaining that value for manual mode. See [move timing](usage.md#move-timing) for clock allocation and time-pressure behavior.
 

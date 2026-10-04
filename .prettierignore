@@ -4,3 +4,4 @@ dist
 .codex
 .impeccable
 package-lock.json
+apps/server/src/adapters/engines/lozza/vendor

@@ -24,7 +24,7 @@ Started with npm on a local machine. Lichess web sessions join standard quick-pa
 
 ## Capabilities and Constraints
 
-- Stockfish 19 Lite is the default; the owner also requested nearby Lite alternatives. Stockfish 18 Lite and 17.1 Lite are selectable. Engines remain replaceable through a port and registry.
+- Lozza 2 is the default. The selector lists Lozza 2, Lozza 5, Stockfish 10, and Stockfish 19 Lite in increasing reference-rating order, with numbers matching ChessBot. Engines remain replaceable through a port and registry.
 - Expand shows ongoing games only, with complete boards and no horizontal scrolling.
 - Recently finished games and History use a smaller board grid. Live cards keep compact metadata around the board, with no last-move text, flip controls, or Review row. Public game IDs link to Lichess.
 - Live games have no search or account filter. The workspace header is removed; themes and session controls live in the sidebar.

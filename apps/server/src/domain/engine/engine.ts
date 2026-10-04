@@ -33,6 +33,7 @@ export interface ChessEngine {
 export interface EngineFactory {
   id: string;
   name: string;
+  elo?: number;
   create(): ChessEngine;
 }
 export interface AnalysisService {

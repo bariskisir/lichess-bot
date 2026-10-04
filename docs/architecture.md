@@ -7,7 +7,7 @@ apps/
   server/src/
     domain/          Engine and Lichess ports; validated chess positions
     application/     Sessions, games, scheduling, configuration, authentication
-    adapters/        Lichess, Stockfish, HTTP, authentication, persistence, demo
+    adapters/        Lichess, local engines, HTTP, authentication, persistence, demo
     config/          Explicit launch options for isolated test servers
     shared/          Cancellation, retry, and asynchronous coordination
   web/src/
@@ -43,12 +43,14 @@ Configuration, password hashes, and history use serialized atomic JSON writes. I
 
 ## Add an engine
 
-Three Lite distributions are registered: `stockfish-19-lite-local` (default), `stockfish-18-lite-local`, and `stockfish-17-lite-local` (Stockfish 17.1). Each uses an explicitly versioned single-threaded build in its own child process. A distribution descriptor selects the package, entry file, and expected UCI identity without duplicating engine lifecycle code.
+Four distributions are registered: `lozza-2-local` (default), `lozza-5-local`, `stockfish-10-local`, and `stockfish-19-lite-local`. Each runs in its own child process. `UciEngine` owns identity verification, startup, progress monitoring, deadlines, cancellation, and process cleanup. Distribution descriptors supply each engine's entry point, expected identity, and reference rating. The registry sorts the catalog by rating.
+
+Stockfish runs the pinned npm JS/WASM builds. Lozza's unmodified sources run in a worker-compatible JavaScript context. Its adapter restores coordinate move output after every position command, normalizes mate scores, and provides MultiPV by excluding previous root choices from successive searches. It restores complete position history for each rank and divides timed searches across the requested alternatives. A shortened live deadline retains the latest root candidate and terminates the synchronous Lozza process; a later search creates a replacement. Cancellation also terminates that process.
 
 To add another engine:
 
 1. Implement `ChessEngine` from `apps/server/src/domain/engine/engine.ts` in a new adapter folder. Respect cancellation, position history, and process cleanup.
-2. Register its `EngineFactory` in the composition root with a unique ID and display name.
+2. Register its `EngineFactory` in the composition root with a unique ID, display name, and optional reference rating.
 3. The dashboard reads the registry catalog automatically. No selector or scheduler changes are needed.
 4. Add adapter tests under `tests/unit/engine/`, including legal output, cancellation, and failure recovery.
 

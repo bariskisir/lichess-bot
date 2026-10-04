@@ -61,8 +61,12 @@ export function EngineSelector({
       >
         <Cpu aria-hidden="true" />
         <span className="engine-identity__details">
-          <strong>{selected?.name ?? 'Loading engines…'}</strong>
-          <span>Lite · Standard chess</span>
+          <strong>
+            {selected
+              ? `${selected.name}${selected.elo === undefined ? '' : ` · ${selected.elo}`}`
+              : 'Loading engines…'}
+          </strong>
+          <span>Local · Standard chess</span>
         </span>
         <span className="engine-identity__status">
           {selected ? 'Installed' : 'Loading'}
@@ -98,7 +102,10 @@ export function EngineSelector({
                 }
               }}
             >
-              <span>{engine.name}</span>
+              <span>
+                {engine.name}
+                {engine.elo === undefined ? '' : ` · ${engine.elo}`}
+              </span>
               {engine.id === value && <Check aria-hidden="true" />}
             </button>
           ))}

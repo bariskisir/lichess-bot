@@ -11,6 +11,13 @@ export function applyUci(chess: Chess, uci: string) {
   return chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
 }
 
+/** Reconstructs engine positions with their complete history and special-move rights. */
+export function enginePositionBoard(position: EnginePosition): Chess {
+  const board = new Chess(position.initialFen);
+  for (const move of position.moves) applyUci(board, move);
+  return board;
+}
+
 export class GamePosition {
   readonly chess: Chess;
   readonly uciMoves: string[];

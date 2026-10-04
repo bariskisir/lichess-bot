@@ -12,6 +12,7 @@ import type { ConfigurationService } from '../../application/config/configuratio
 import { RuntimeConflict, type BotRuntime } from '../../application/runtime/bot-runtime.js';
 import type { DashboardStore } from '../../application/dashboard/dashboard-store.js';
 import { createDemoSnapshot } from '../demo/demo-snapshot.js';
+import { DashboardEventStream } from './dashboard-event-stream.js';
 import {
   AuthenticationFailure,
   type AuthenticationService,
@@ -37,7 +38,7 @@ export interface HttpServerOptions {
 export class DashboardHttpServer {
   private readonly server;
   private vite?: import('vite').ViteDevServer;
-  private readonly streams = new Set<ServerResponse>();
+  private readonly streams = new Set<DashboardEventStream>();
   private readonly staticRoot = resolve('dist/web');
   private demoSnapshot?: DashboardSnapshot;
   private boundPort = 0;
@@ -54,6 +55,10 @@ export class DashboardHttpServer {
   ) {
     if (options.demo) this.demoSnapshot = createDemoSnapshot();
     this.server = createServer((request, response) => {
+      response.on('error', (error: NodeJS.ErrnoException) => {
+        this.logger.warn({ code: error.code }, 'Dashboard response failed; closing connection.');
+        response.destroy();
+      });
       void this.handle(request, response).catch((error: unknown) => this.fail(response, error));
     });
     this.server.requestTimeout = 15_000;
@@ -146,7 +151,7 @@ export class DashboardHttpServer {
     }
     if (path === '/api/auth/logout' && method === 'POST') {
       this.auth.logout(token);
-      for (const stream of this.streams) stream.end();
+      for (const stream of this.streams) stream.close();
       this.sessionCookie(response, null);
       this.json(response, 200, this.auth.status());
       return;
@@ -168,7 +173,7 @@ export class DashboardHttpServer {
         return this.auth.change(input.password, input.currentPassword, client);
       });
       this.sessionCookie(response, session);
-      for (const stream of this.streams) stream.end();
+      for (const stream of this.streams) stream.close();
       this.json(response, 200, this.auth.status(session ?? undefined));
       return;
     }
@@ -336,42 +341,21 @@ export class DashboardHttpServer {
       this.json(response, 503, { error: 'Too many dashboard connections.' });
       return;
     }
-    response.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-      'X-Accel-Buffering': 'no',
-    });
-    this.streams.add(response);
     const token = /(?:^|;\s*)lichess_bot_session=([A-Za-z\d_-]{43})(?:;|$)/.exec(
       request.headers.cookie ?? '',
     )?.[1];
-    const send = (snapshot: DashboardSnapshot) => {
-      if (!this.auth.authorized(token)) {
-        response.end();
-        return;
-      }
-      if (response.writableLength > 1024 * 1024) {
-        response.end();
-        return;
-      }
-      response.write(`id: ${snapshot.revision}\ndata: ${JSON.stringify(snapshot)}\n\n`);
-    };
-    send(this.demoSnapshot ?? this.store.snapshot());
-    const unsubscribe = this.options.demo ? () => {} : this.store.subscribe(send);
-    const heartbeat = setInterval(() => {
-      if (!this.auth.authorized(token)) response.end();
-      else response.write(': heartbeat\n\n');
-    }, 15_000);
-    const close = () => {
-      clearInterval(heartbeat);
-      unsubscribe();
-      this.streams.delete(response);
-    };
-    request.once('close', close);
-    response.once('close', close);
+    const stream = new DashboardEventStream(
+      response,
+      () => this.auth.authorized(token),
+      () => this.streams.delete(stream),
+    );
+    this.streams.add(stream);
+    stream.start(this.demoSnapshot ?? this.store.snapshot(), (send) =>
+      this.options.demo ? () => {} : this.store.subscribe(send),
+    );
   }
   private fail(response: ServerResponse, error: unknown): void {
+    if (response.destroyed || response.writableEnded) return;
     if (response.headersSent) {
       response.end();
       return;
@@ -401,7 +385,7 @@ export class DashboardHttpServer {
     });
   }
   async close(): Promise<void> {
-    for (const stream of this.streams) stream.end();
+    for (const stream of this.streams) stream.close();
     await this.vite?.close();
     await new Promise<void>((resolve) => {
       this.server.close(() => resolve());

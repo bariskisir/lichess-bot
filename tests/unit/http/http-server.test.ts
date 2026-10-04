@@ -17,6 +17,8 @@ import { ScryptPasswordHasher } from '../../../apps/server/src/adapters/auth/scr
 const cleanup: (() => Promise<void>)[] = [];
 afterEach(async () => {
   for (const close of cleanup.splice(0).reverse()) await close();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 async function application() {
   const directory = await mkdtemp(join(tmpdir(), 'lichess-bot-http-'));
@@ -64,11 +66,91 @@ async function application() {
     await server.close();
     store.close();
   });
-  return { url: `http://127.0.0.1:${server.port}`, gateway, directory, store, archive };
+  return { url: `http://127.0.0.1:${server.port}`, gateway, directory, store, archive, server };
 }
 const mutationHeaders = { 'Content-Type': 'application/json', 'X-Lichess-Bot': 'dashboard' };
 
 describe('dashboard API boundaries', () => {
+  it('releases disconnected SSE clients so repeated reconnects do not exhaust the connection limit', async () => {
+    const app = await application();
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const originalSubscribe = app.store.subscribe.bind(app.store);
+    const unsubscribe = vi.fn();
+    vi.spyOn(app.store, 'subscribe').mockImplementation((send) => {
+      const detach = originalSubscribe(send);
+      return () => {
+        detach();
+        unsubscribe();
+      };
+    });
+    for (let count = 1; count <= 22; count++) {
+      const abort = new AbortController();
+      const response = await fetch(`${app.url}/api/events`, { signal: abort.signal });
+      expect(response.status).toBe(200);
+      const reader = response.body!.getReader();
+      expect(new TextDecoder().decode((await reader.read()).value)).toContain('data:');
+      expect(vi.getTimerCount()).toBe(1);
+      abort.abort();
+      await vi.waitFor(() => {
+        expect(unsubscribe).toHaveBeenCalledTimes(count);
+        expect(vi.getTimerCount()).toBe(0);
+      });
+    }
+    expect((await fetch(`${app.url}/api/health`)).status).toBe(200);
+    expect(app.gateway).not.toHaveBeenCalled();
+  });
+  it('closes SSE publishers on password changes and logout while leaving the server available', async () => {
+    const app = await application();
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const initial = await fetch(`${app.url}/api/events`);
+    const initialReader = initial.body!.getReader();
+    await initialReader.read();
+    expect(vi.getTimerCount()).toBe(1);
+    const password = await fetch(`${app.url}/api/auth/password`, {
+      method: 'PUT',
+      headers: mutationHeaders,
+      body: JSON.stringify({ password: 'test-password' }),
+    });
+    expect(password.status).toBe(200);
+    expect(vi.getTimerCount()).toBe(0);
+    expect((await initialReader.read()).done).toBe(true);
+    vi.advanceTimersByTime(30_000);
+    expect((await fetch(`${app.url}/api/snapshot`)).status).toBe(401);
+    const cookie = password.headers.get('set-cookie')!.split(';')[0]!;
+    const reconnected = await fetch(`${app.url}/api/events`, { headers: { Cookie: cookie } });
+    expect(reconnected.status).toBe(200);
+    const reader = reconnected.body!.getReader();
+    await reader.read();
+    app.store.setRuntime({ active: 4 });
+    expect(new TextDecoder().decode((await reader.read()).value)).toContain('"active":4');
+    const logout = await fetch(`${app.url}/api/auth/logout`, {
+      method: 'POST',
+      headers: { ...mutationHeaders, Cookie: cookie },
+    });
+    expect(logout.status).toBe(200);
+    expect(vi.getTimerCount()).toBe(0);
+    expect((await reader.read()).done).toBe(true);
+    vi.advanceTimersByTime(30_000);
+    expect((await fetch(`${app.url}/api/health`)).status).toBe(200);
+    expect(app.gateway).not.toHaveBeenCalled();
+  });
+  it('cancels SSE heartbeats synchronously before ending responses during shutdown', async () => {
+    const app = await application();
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const subscription = vi.spyOn(app.store, 'subscribe');
+    const response = await fetch(`${app.url}/api/events`);
+    const reader = response.body!.getReader();
+    expect(new TextDecoder().decode((await reader.read()).value)).toContain('data:');
+    expect(vi.getTimerCount()).toBe(1);
+    const send = subscription.mock.calls[0]![0];
+    const closing = app.server.close();
+    expect(vi.getTimerCount()).toBe(0);
+    // Already queued publishers and heartbeat callbacks must be harmless after end().
+    send(app.store.snapshot());
+    vi.advanceTimersByTime(30_000);
+    expect((await reader.read()).done).toBe(true);
+    await closing;
+  });
   it('clears saved history through the API while retaining ongoing games and counters', async () => {
     const app = await application();
     const game = archivedGame();

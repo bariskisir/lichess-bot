@@ -122,8 +122,9 @@ export class DashboardHttpServer {
     const method = request.method ?? 'GET';
     if (method !== 'GET' && method !== 'HEAD') {
       const origin = request.headers.origin;
+      const host = request.headers.host ?? '';
       if (
-        (origin && origin !== `http://${request.headers.host}`) ||
+        (origin && origin !== `http://${host}` && origin !== `https://${host}`) ||
         request.headers['x-lichess-bot'] !== 'dashboard'
       ) {
         this.json(response, 403, { error: 'Use the dashboard to change application state.' });

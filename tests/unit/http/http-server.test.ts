@@ -347,4 +347,17 @@ describe('dashboard API boundaries', () => {
     expect(await statusWithHost(open.url, `example.com`)).toBe(200);
     expect(await statusWithHost(open.url, `localhost:${openPort}`)).toBe(200);
   });
+  it('accepts dashboard mutations behind an https proxy', async () => {
+    const app = await application();
+    const url = new URL(`${app.url}/api/auth/password`);
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        ...mutationHeaders,
+        Origin: `https://${url.host}`,
+      },
+      body: JSON.stringify({ password: 'test-proxy-password' }),
+    });
+    expect(response.status).toBe(200);
+  });
 });

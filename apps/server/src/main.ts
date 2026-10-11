@@ -10,6 +10,7 @@ import { STOCKFISH_DISTRIBUTIONS } from './adapters/engines/stockfish/stockfish-
 import { LozzaEngine } from './adapters/engines/lozza/lozza-engine.js';
 import { LOZZA_DISTRIBUTIONS } from './adapters/engines/lozza/lozza-distributions.js';
 import { WebLichessGateway } from './adapters/lichess/web-gateway.js';
+import { WebChesscomGateway } from './adapters/chesscom/web-gateway.js';
 import { GameArchive } from './adapters/persistence/game-archive.js';
 import { JsonConfigurationRepository } from './adapters/persistence/json-configuration-repository.js';
 import { BotRuntime } from './application/runtime/bot-runtime.js';
@@ -21,9 +22,9 @@ import { JsonAuthenticationRepository } from './adapters/auth/json-authenticatio
 const launch = readLaunchOptions();
 const config = new ConfigurationService(new JsonConfigurationRepository(launch.directory));
 await config.load();
-await mkdir('logs', { recursive: true });
+await mkdir(launch.logsDirectory, { recursive: true });
 const destination = pino.destination({
-  dest: resolve('logs', `lichess-bot-${new Date().toISOString().slice(0, 10)}.jsonl`),
+  dest: resolve(launch.logsDirectory, `lichess-bot-${new Date().toISOString().slice(0, 10)}.jsonl`),
   sync: false,
 });
 const logger = pino(
@@ -55,10 +56,15 @@ const runtime = new BotRuntime(
   config,
   engines,
   (account) =>
-    new WebLichessGateway(account.cookie, {
-      userAgent: config.settings.userAgent,
-      retry: { attempts: config.settings.requestAttempts, delayMs: config.settings.requestDelayMs },
-    }),
+    account.provider === 'chesscom'
+      ? new WebChesscomGateway(account.cookie, {
+          userAgent: config.settings.userAgent,
+          retry: { attempts: config.settings.requestAttempts, delayMs: config.settings.requestDelayMs },
+        }, logger)
+      : new WebLichessGateway(account.cookie, {
+          userAgent: config.settings.userAgent,
+          retry: { attempts: config.settings.requestAttempts, delayMs: config.settings.requestDelayMs },
+        }),
   store,
   archive,
   logger,

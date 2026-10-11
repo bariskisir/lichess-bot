@@ -7,6 +7,8 @@ import type {
   RuntimePhase,
 } from '../../../../../packages/contracts/src/index.js';
 import type { LichessGateway } from '../../domain/lichess/gateway.js';
+import type { ChesscomGateway } from '../../domain/chesscom/gateway.js';
+import type { WebChesscomGateway } from '../../adapters/chesscom/web-gateway.js';
 import type { ConfigurationService } from '../config/configuration-service.js';
 import type { DashboardStore } from '../dashboard/dashboard-store.js';
 import { initialRuntime } from '../dashboard/dashboard-store.js';
@@ -16,12 +18,15 @@ import { MoveSelector } from '../game/move-selector.js';
 import { MatchBudget } from '../scheduling/match-budget.js';
 import { PoolRotation } from '../scheduling/pool-rotation.js';
 import { AccountRunner } from './account-runner.js';
+import { ChesscomAccountRunner } from './chesscom-account-runner.js';
 import type { GameHistoryRepository } from '../game/game-history-repository.js';
 import { GameHistoryService } from '../game/game-history-service.js';
 import { abortError, isAbort, sleep } from '../../shared/async.js';
 
 export class RuntimeConflict extends Error {}
-export type GatewayFactory = (account: AccountSecret) => LichessGateway;
+export type GatewayFactory = (
+  account: AccountSecret,
+) => LichessGateway | (ChesscomGateway & Pick<WebChesscomGateway, 'seek' | 'cancelSeek' | 'seekState'>);
 
 export class BotRuntime {
   private phase: RuntimePhase = 'idle';
@@ -66,6 +71,7 @@ export class BotRuntime {
       this.config.accounts.map((account): AccountView => ({
         id: account.id,
         label: account.label,
+        provider: account.provider,
         username: null,
         userId: null,
         state: 'ready',
@@ -150,19 +156,32 @@ export class BotRuntime {
       complete: (game: GameView) => this.complete(game),
       changed: () => this.updateCounts(),
     };
+    const chesscomPools = new PoolRotation(settings.chesscomGameTypes);
     const accounts = this.store.snapshot().accounts;
-    const runners = this.config.accounts.map(
-      (secret) =>
-        new AccountRunner(
-          accounts.find((account) => account.id === secret.id)!,
-          this.gateways(secret),
+    const runners = this.config.accounts.map((secret) => {
+      const view = accounts.find((account) => account.id === secret.id)!;
+      const gateway = this.gateways(secret);
+      if (secret.provider === 'chesscom')
+        return new ChesscomAccountRunner(
+          view,
+          secret.cookie,
+          gateway as ChesscomGateway & Pick<WebChesscomGateway, 'seek' | 'cancelSeek' | 'seekState'>,
           selector,
           settings,
-          context,
+          { ...context, pools: chesscomPools },
           this.store,
           this.logger,
-        ),
-    );
+        );
+      return new AccountRunner(
+        view,
+        gateway as LichessGateway,
+        selector,
+        settings,
+        context,
+        this.store,
+        this.logger,
+      );
+    });
     const runScope = new AbortController();
     const scope = AbortSignal.any([signal, runScope.signal]);
     let tasks: Promise<void>[] = [];

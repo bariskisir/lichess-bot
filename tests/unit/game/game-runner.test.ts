@@ -15,6 +15,7 @@ import { TurnTiming } from '../../../apps/server/src/application/game/timing/tur
 const account: AccountView = {
   id: 'test-account',
   label: 'Test',
+  provider: 'lichess',
   username: 'TestBot',
   userId: 'testbot',
   state: 'ready',

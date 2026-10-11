@@ -1,0 +1,9 @@
+node_modules
+dist
+logs
+data
+har
+.git
+test-results
+playwright-report
+*.tsbuildinfo

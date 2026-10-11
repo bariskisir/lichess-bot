@@ -19,6 +19,7 @@ export function AccountsPage({
   const [adding, setAdding] = useState(accounts.length === 0);
   const [editing, setEditing] = useState<string | null>(null);
   const [label, setLabel] = useState('');
+  const [provider, setProvider] = useState<AccountView['provider']>('lichess');
   const [cookie, setCookie] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -27,6 +28,7 @@ export function AccountsPage({
   function openEditor(account?: AccountView): void {
     setEditing(account?.id ?? null);
     setLabel(account?.label ?? '');
+    setProvider(account?.provider ?? 'lichess');
     setCookie('');
     setError(null);
     setAdding(true);
@@ -38,6 +40,7 @@ export function AccountsPage({
     try {
       await api(editing ? `/api/accounts/${editing}` : '/api/accounts', editing ? 'PUT' : 'POST', {
         label,
+        provider,
         cookie,
       });
       setAdding(false);
@@ -99,7 +102,7 @@ export function AccountsPage({
         >
           <div className="account-form__heading">
             <KeyRound aria-hidden="true" />
-            <h3>{editing ? 'Replace account session' : 'Connect a Lichess account'}</h3>
+            <h3>{editing ? 'Replace account session' : 'Connect an account'}</h3>
             <Button
               variant="ghost"
               className="icon-button"
@@ -126,21 +129,38 @@ export function AccountsPage({
             />
           </div>
           <div className="form-field">
-            <label htmlFor="account-cookie">Lichess session</label>
+            <label htmlFor="account-provider">Provider</label>
+            <select
+              id="account-provider"
+              value={provider}
+              onChange={(event) => setProvider(event.target.value as AccountView['provider'])}
+              disabled={!allowed || busy}
+            >
+              <option value="lichess">lichess.org</option>
+              <option value="chesscom">chess.com</option>
+            </select>
+          </div>
+          <div className="form-field">
+            <label htmlFor="account-cookie">
+              {provider === 'lichess' ? 'Lichess session' : 'chess.com session'}
+            </label>
             <input
               id="account-cookie"
               type="password"
               value={cookie}
               onChange={(event) => setCookie(event.target.value)}
-              placeholder="lila2 session value"
+              placeholder={
+                provider === 'lichess' ? 'lila2 session value' : 'PHPSESSID=...; ...'
+              }
               required
               disabled={!allowed || busy}
               autoComplete="new-password"
               spellCheck={false}
             />
             <p>
-              Copy the lila2 cookie value from your browser’s storage for lichess.org. It is saved
-              locally and never returned to the dashboard.
+              {provider === 'lichess'
+                ? 'Copy the lila2 cookie value from your browser’s storage for lichess.org. It is saved locally and never returned to the dashboard.'
+                : 'Paste the whole Cookie header (PHPSESSID=...; ...) or just the PHPSESSID value — a bare value is treated as PHPSESSID. It is saved locally and never returned to the dashboard.'}
             </p>
           </div>
           <div className="account-form__actions">
@@ -162,6 +182,7 @@ export function AccountsPage({
               <h3>{account.username ?? account.label}</h3>
               <p>
                 {account.username ? account.label : 'Session saved, awaiting verification'}
+                {` · ${account.provider === 'chesscom' ? 'chess.com' : 'lichess.org'}`}
                 {account.pool ? ` · Searching ${account.pool}` : ''}
               </p>
               {account.error && <p className="account-row__error">{account.error}</p>}
@@ -217,7 +238,7 @@ export function AccountsPage({
       {!accounts.length && !adding && (
         <EmptyState
           title="No accounts connected"
-          description="Connect a Lichess session to make this workspace yours."
+          description="Connect a lichess.org or chess.com session to make this workspace yours."
         >
           <Button variant="primary" disabled={!allowed} onClick={() => openEditor()}>
             <Plus />

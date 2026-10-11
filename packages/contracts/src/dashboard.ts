@@ -1,4 +1,4 @@
-import type { BotSettings } from './settings.js';
+import type { BotSettings, Provider } from './settings.js';
 
 export type Color = 'white' | 'black';
 export type RuntimePhase =
@@ -23,6 +23,8 @@ export interface EvaluationView {
 }
 export interface GameView {
   id: string;
+  provider: Provider;
+  externalUrl: string;
   accountId: string;
   accountName: string;
   color: Color;
@@ -49,6 +51,7 @@ export interface GameView {
 export interface AccountView {
   id: string;
   label: string;
+  provider: Provider;
   username: string | null;
   userId: string | null;
   state: 'ready' | 'authenticating' | 'searching' | 'playing' | 'recovering' | 'error';

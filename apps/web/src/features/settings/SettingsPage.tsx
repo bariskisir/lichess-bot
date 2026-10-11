@@ -165,7 +165,7 @@ export function SettingsPage({
           </div>
           <div className="settings-section__fields">
             <fieldset className="pool-selector" disabled={disabled('gameTypes')}>
-              <legend>Time controls</legend>
+              <legend>Lichess time controls</legend>
               <p>Standard rated pools. Searches rotate through your selection.</p>
               <div>
                 {SUPPORTED_POOLS.map((pool) => (
@@ -187,6 +187,35 @@ export function SettingsPage({
                 ))}
               </div>
               {details.gameTypes && <p className="field-error">{details.gameTypes[0]}</p>}
+            </fieldset>
+            <fieldset className="pool-selector" disabled={disabled('chesscomGameTypes')}>
+              <legend>chess.com time controls</legend>
+              <p>Rated 1-minute and longer pools. chess.com searches rotate separately.</p>
+              <div>
+                {SUPPORTED_POOLS.map((pool) => (
+                  <label
+                    key={pool}
+                    className={draft.chesscomGameTypes.includes(pool) ? 'is-selected' : ''}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={draft.chesscomGameTypes.includes(pool)}
+                      onChange={(event) =>
+                        update(
+                          'chesscomGameTypes',
+                          event.target.checked
+                            ? [...draft.chesscomGameTypes, pool]
+                            : draft.chesscomGameTypes.filter((value) => value !== pool),
+                        )
+                      }
+                    />
+                    <span>{pool}</span>
+                  </label>
+                ))}
+              </div>
+              {details.chesscomGameTypes && (
+                <p className="field-error">{details.chesscomGameTypes[0]}</p>
+              )}
             </fieldset>
             <div className="settings-field-grid">
               {number(
@@ -320,7 +349,7 @@ export function SettingsPage({
               />
               <span>
                 <strong>Claim available victories</strong>
-                <small>Claim only after Lichess confirms the opponent has left.</small>
+                <small>Claim only after the provider confirms the opponent has left.</small>
               </span>
             </label>
           </div>
@@ -360,7 +389,7 @@ export function SettingsPage({
                 aria-describedby={`user-agent-help${details.userAgent?.length ? ' user-agent-error' : ''}`}
               />
               <small id="user-agent-help">
-                Used by both Lichess HTTP and WebSocket connections.
+                Used by both lichess.org and chess.com HTTP and WebSocket connections.
               </small>
               {details.userAgent?.[0] && (
                 <p className="field-error" id="user-agent-error">

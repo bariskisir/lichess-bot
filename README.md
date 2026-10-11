@@ -5,7 +5,7 @@
 <h1 align="center">lichess-bot</h1>
 
 <p align="center">
-  Automate Lichess matches across multiple accounts with extensible chess engines.
+  Automate Lichess and chess.com matches across multiple accounts with extensible chess engines.
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@
   <img src="docs/interface.png" alt="lichess-bot interface" width="840">
 </p>
 
-> **Educational use:** This project is intended for educational purposes. Use it ethically, respect Lichess rules and other players, and run automation only where permitted.
+> **Educational use:** This project is intended for educational purposes. Use it ethically, respect Lichess and chess.com rules and other players, and run automation only where permitted.
 
 ---
 
@@ -34,7 +34,9 @@ Open **http://localhost:4173**. The dashboard opens without a password; set one 
 
 1. Sign in to **lichess.org**, press **F12**, and open **Application → Cookies → https://lichess.org**.
 2. Copy the **Value** of the `lila2` cookie. If copied as `lila2=...`, keep only the text after `=`.
-3. In the dashboard, open **Accounts → Add account**, enter a name and paste the cookie value. Select **Connect account**, then **Start session** in the sidebar.
+3. In the dashboard, open **Accounts → Add account**, choose **lichess.org**, enter a name and paste the cookie value. Select **Connect account**, then **Start session** in the sidebar.
+
+For **chess.com**, open developer tools on **www.chess.com** while signed in, copy the `Cookie` request header from the Network tab, and add it with the **chess.com** provider instead. Matchmaking pools for each site are configured separately in **Settings**.
 
 ## Production
 
@@ -42,6 +44,15 @@ Open **http://localhost:4173**. The dashboard opens without a password; set one 
 npm run build
 npm start
 ```
+
+## Docker
+
+```bash
+docker build -t lichess-bot .
+docker run -d --restart unless-stopped --name lichess-bot -p 4173:4173 -v lichess-bot-data:/data lichess-bot
+```
+
+Open **http://localhost:4173**. Settings and game history live in the `lichess-bot-data` volume (`/data`), logs under `/data/logs`. The container port is fixed at 4173.
 
 ## Documentation
 

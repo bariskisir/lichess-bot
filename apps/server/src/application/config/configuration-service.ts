@@ -29,7 +29,7 @@ export class ConfigurationService {
   }
   async addAccount(input: unknown): Promise<AccountSecret> {
     const parsed = accountInputSchema.parse(input);
-    if (this.accounts.some((account) => account.cookie === parsed.cookie))
+    if (this.accounts.some((account) => account.provider === parsed.provider && account.cookie === parsed.cookie))
       throw new Error('This session is already connected.');
     const account = { ...parsed, id: randomUUID() };
     const next = configurationSchema.parse({
@@ -43,7 +43,7 @@ export class ConfigurationService {
   async replaceAccount(id: string, input: unknown): Promise<void> {
     if (!this.accounts.some((account) => account.id === id)) throw new Error('Account not found.');
     const parsed = accountInputSchema.parse(input);
-    if (this.accounts.some((account) => account.id !== id && account.cookie === parsed.cookie))
+    if (this.accounts.some((account) => account.id !== id && account.provider === parsed.provider && account.cookie === parsed.cookie))
       throw new Error('This session is already connected.');
     const next = {
       ...this.configuration,

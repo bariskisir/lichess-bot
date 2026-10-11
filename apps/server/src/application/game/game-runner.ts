@@ -187,6 +187,8 @@ export class GameRunner {
     const snapshot = this.snapshot;
     this.view = {
       id: snapshot.id,
+      provider: 'lichess',
+      externalUrl: `https://lichess.org/${snapshot.id}`,
       accountId: this.account.id,
       accountName: this.account.username ?? this.account.label,
       color: snapshot.color,

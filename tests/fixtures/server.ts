@@ -12,7 +12,7 @@ import type {
 } from '../../apps/server/src/domain/lichess/gateway.js';
 
 export function secret(label = 'Test account'): AccountSecret {
-  return { id: randomUUID(), label, cookie: 'lila2=fake-session-value-for-local-tests' };
+  return { id: randomUUID(), label, provider: 'lichess', cookie: 'lila2=fake-session-value-for-local-tests' };
 }
 export function memoryConfig(
   accounts: AccountSecret[] = [],
@@ -121,6 +121,8 @@ export function archivedGame(): GameView {
   const snapshot = gameSnapshot(['e4', 'e5']);
   return {
     id: snapshot.id,
+    provider: 'lichess',
+    externalUrl: `https://lichess.org/${snapshot.id}`,
     accountId: randomUUID(),
     accountName: 'TestBot',
     color: 'white',

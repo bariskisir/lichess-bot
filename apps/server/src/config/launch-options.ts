@@ -7,6 +7,7 @@ export function readLaunchOptions(args = process.argv.slice(2)) {
     args.find((argument) => argument.startsWith(`--${name}=`))?.slice(name.length + 3);
   return {
     directory: resolve(value('data-directory') ?? 'data'),
+    logsDirectory: resolve(value('logs-directory') ?? 'logs'),
     port: value('port')
       ? z.coerce.number().int().min(0).max(65535).parse(value('port'))
       : undefined,

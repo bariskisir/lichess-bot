@@ -4,9 +4,14 @@ Install Node.js 24 or newer, run `npm install`, and start with `npm run dev`. Th
 
 ## Accounts
 
-In **Accounts**, add a label and the `lila2` session value from your Lichess account. You can enter the value alone or `lila2=value`. Do not paste an entire cookie header. Adding an account stores the session locally; authentication happens when you start the bot. Account session values are never returned to the dashboard.
+In **Accounts**, choose a provider and add its session:
 
-The application uses authenticated Lichess website sessions and its real-time protocol. This is a website integration rather than the official Bot API; upstream website changes may require adapter updates. Use accounts and games where engine assistance is permitted under [Lichess terms](https://lichess.org/terms-of-service).
+- **lichess.org**: add a label and the `lila2` session value from your Lichess account. You can enter the value alone or `lila2=value`. Do not paste an entire cookie header.
+- **chess.com**: add a label and paste the `Cookie` header value for `www.chess.com` from your browser's developer tools (Network tab), or just the `PHPSESSID` value. A bare value is treated as `PHPSESSID`.
+
+Adding an account stores the session locally; authentication happens when you start the bot. Account session values are never returned to the dashboard. The same cookie value cannot be added twice for the same provider.
+
+The application uses authenticated website sessions and their real-time protocols. This is a website integration rather than the official APIs; upstream website changes may require adapter updates. Chess.com has no public playing API, so live games use its RSocket transport with TCN move encoding (see [architecture](architecture.md)). Use accounts and games where engine assistance is permitted under [Lichess terms](https://lichess.org/terms-of-service) and [chess.com fair-play rules](https://www.chess.com/legal/fair-play). Automated play risks account restrictions; prefer casual or bot-tolerant accounts where available.
 
 ## Default settings
 
@@ -32,6 +37,8 @@ The application uses authenticated Lichess website sessions and its real-time pr
 | Retry interval                    | 1,000 ms               |
 
 The default selection is **1+0, 2+1, 3+0, 3+2, 5+0, 5+3**. The **10+0, 10+5, 15+10, 30+0, 30+20** pools remain available but start unselected. Only standard, real-time chess is supported.
+
+**Settings → Matchmaking** keeps two independent pool selections: **Lichess time controls** for lichess.org accounts and **chess.com time controls** for chess.com accounts. Each provider rotates through its own selection; shared session limits (game target, simultaneous games) apply to both together.
 
 The engine selector uses the same names and reference ratings as ChessBot, in ascending order:
 
@@ -62,9 +69,9 @@ If you lose the password, stop the application, rename `dashboard-auth.json` ins
 
 Everything is configured in the dashboard; the application does not load environment variables or .env files.
 
-**Settings → Application** includes the browser User-Agent, dashboard port, retry attempts and interval, log level, and automatic session startup. The browser User-Agent is shared by Lichess HTTP and WebSocket connections. It does not identify itself as lichess-bot. Port changes require restarting the application; the dashboard stays local to this machine. Log level changes apply immediately. Automatic startup uses the saved accounts and settings on the next launch.
+**Settings → Application** includes the browser User-Agent, dashboard port, retry attempts and interval, log level, and automatic session startup. The browser User-Agent is shared by lichess.org and chess.com HTTP and WebSocket connections. It does not identify itself as lichess-bot. Port changes require restarting the application; the dashboard stays local to this machine. Log level changes apply immediately. Automatic startup uses the saved accounts and settings on the next launch.
 
-All Lichess HTTP calls and WebSocket handshakes use one retry policy: **three total attempts**, with **1,000 ms** between failed attempts. It retries network errors, timeouts, HTTP 408/425/429 and server errors, supports cancellation, and honors Retry-After. A 429 response creates a shared per-account cooldown of at least one minute. Authentication failures and permanent client errors fail immediately. After exhausted attempts, running game/account workers retain their recovery lifecycle. Submitted game actions are reconciled against authoritative position updates before replaying them.
+All HTTP calls and WebSocket handshakes use one retry policy: **three total attempts**, with **1,000 ms** between failed attempts. It retries network errors, timeouts, HTTP 408/425/429 and server errors, supports cancellation, and honors Retry-After. A 429 response creates a shared per-account cooldown of at least one minute. Authentication failures and permanent client errors fail immediately. After exhausted attempts, running game/account workers retain their recovery lifecycle. Submitted game actions are reconciled against authoritative position updates before replaying them.
 
 ## Local data
 

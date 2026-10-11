@@ -23,6 +23,9 @@ export const SUPPORTED_POOLS = [
   '30+20',
 ] as const;
 
+export const providerSchema = z.enum(['lichess', 'chesscom']);
+export type Provider = z.infer<typeof providerSchema>;
+
 export const DEFAULT_POOLS = ['1+0', '2+1', '3+0', '3+2', '5+0', '5+3'] as const;
 
 export const settingsSchema = z.object({
@@ -51,6 +54,11 @@ export const settingsSchema = z.object({
     .min(1)
     .refine((values) => new Set(values).size === values.length, 'Select each time control once.')
     .default([...DEFAULT_POOLS]),
+  chesscomGameTypes: z
+    .array(z.enum(SUPPORTED_POOLS))
+    .min(1)
+    .refine((values) => new Set(values).size === values.length, 'Select each time control once.')
+    .default([...DEFAULT_POOLS]),
   totalMatches: z.number().int().min(1).max(1_000_000).default(100),
   maxConcurrentGames: z.number().int().min(1).max(100).default(4),
   maxEngines: z.number().int().min(1).max(32).default(3),
@@ -70,17 +78,66 @@ export const settingsSchema = z.object({
 
 export type BotSettings = z.infer<typeof settingsSchema>;
 export const DEFAULT_SETTINGS: BotSettings = settingsSchema.parse({});
-export const accountInputSchema = z.object({
+
+function refineAccountCookie(value: { provider: Provider; cookie: string }, context: z.RefinementCtx) {
+  if (/[\r\n]/.test(value.cookie)) {
+    context.addIssue({
+      code: 'custom',
+      path: ['cookie'],
+      message: 'Enter only the session value.',
+    });
+    return;
+  }
+  if (value.provider === 'lichess') {
+    const normalized = value.cookie.startsWith('lila2=') ? value.cookie : `lila2=${value.cookie}`;
+    if (!/^lila2=[^\s;\r\n]+$/.test(normalized)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['cookie'],
+        message: 'Enter only the lila2 session value.',
+      });
+    }
+  } else if (value.provider === 'chesscom') {
+    if (/^lila2=[^\s;]+$/.test(value.cookie)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['cookie'],
+        message: 'Paste the chess.com Cookie header value or the PHPSESSID value.',
+      });
+    } else if (!/=/.test(value.cookie)) {
+      if (!/^[^\s;\r\n]+$/.test(value.cookie)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['cookie'],
+          message: 'Paste the chess.com Cookie header value or the PHPSESSID value.',
+        });
+      }
+    }
+  }
+}
+
+function normalizeAccountCookie<T extends { provider: Provider; cookie: string }>(value: T): T {
+  if (value.provider === 'lichess' && !value.cookie.startsWith('lila2='))
+    return { ...value, cookie: `lila2=${value.cookie}` };
+  if (value.provider === 'chesscom' && !value.cookie.includes('='))
+    return { ...value, cookie: `PHPSESSID=${value.cookie}` };
+  return value;
+}
+
+const accountFields = {
   label: z.string().trim().min(1).max(60),
-  cookie: z
-    .string()
-    .trim()
-    .min(8)
-    .max(4096)
-    .transform((value) => (value.startsWith('lila2=') ? value : `lila2=${value}`))
-    .refine((value) => /^lila2=[^\s;\r\n]+$/.test(value), 'Enter only the lila2 session value.'),
-});
-export const accountSecretSchema = accountInputSchema.extend({ id: z.uuid() });
+  provider: providerSchema.default('lichess'),
+  cookie: z.string().trim().min(8).max(8192),
+};
+
+export const accountInputSchema = z
+  .object(accountFields)
+  .superRefine(refineAccountCookie)
+  .transform(normalizeAccountCookie);
+export const accountSecretSchema = z
+  .object({ ...accountFields, id: z.uuid() })
+  .superRefine(refineAccountCookie)
+  .transform(normalizeAccountCookie);
 export type AccountSecret = z.infer<typeof accountSecretSchema>;
 export const configurationSchema = z.object({
   version: z.literal(1),

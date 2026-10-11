@@ -5,6 +5,8 @@ import { AtomicJsonFile } from './atomic-json.js';
 
 const archivedGameSchema = z.object({
   id: z.string(),
+  provider: z.enum(['lichess', 'chesscom']).default('lichess'),
+  externalUrl: z.string().default(''),
   accountId: z.string(),
   accountName: z.string(),
   color: z.enum(['white', 'black']),

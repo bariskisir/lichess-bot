@@ -12,6 +12,7 @@ import { FakeGateway, gameSnapshot } from '../../fixtures/server.js';
 const account: AccountView = {
   id: 'test-account',
   label: 'Test',
+  provider: 'lichess',
   username: 'TestBot',
   userId: 'testbot',
   state: 'ready',

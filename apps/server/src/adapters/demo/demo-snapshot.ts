@@ -72,6 +72,8 @@ export function createDemoSnapshot(): DashboardSnapshot {
     const last = board.history({ verbose: true }).at(-1)!;
     return {
       id: `demo000${index}`,
+      provider: 'lichess',
+      externalUrl: `https://lichess.org/demo000${index}`,
       accountId: 'demo-account',
       accountName: 'DemoBot',
       color,
@@ -140,6 +142,7 @@ export function createDemoSnapshot(): DashboardSnapshot {
       {
         id: 'demo-account',
         label: 'Main account',
+        provider: 'lichess',
         username: 'DemoBot',
         userId: 'demo-bot',
         state: 'searching',

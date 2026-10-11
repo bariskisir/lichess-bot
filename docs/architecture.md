@@ -5,9 +5,9 @@ The system separates chess rules, session coordination, external services, and p
 ```text
 apps/
   server/src/
-    domain/          Engine and Lichess ports; validated chess positions
+    domain/          Engine, Lichess and chess.com ports; validated chess positions
     application/     Sessions, games, scheduling, configuration, authentication
-    adapters/        Lichess, local engines, HTTP, authentication, persistence, demo
+    adapters/        Lichess, chess.com, local engines, HTTP, authentication, persistence, demo
     config/          Explicit launch options for isolated test servers
     shared/          Cancellation, retry, and asynchronous coordination
   web/src/
@@ -25,8 +25,10 @@ Related production components, helpers, and SCSS live together in their feature 
 ## Backend boundaries
 
 - **BotRuntime** owns the session lifecycle and shared resources.
-- **AccountRunner** authenticates one account, recovers games, and manages pairing.
-- **GameRunner** owns one live game, recovers authoritative state, and coordinates moves.
+- **AccountRunner** authenticates one lichess.org account, recovers games, and manages pairing.
+- **ChesscomAccountRunner** authenticates one chess.com account, seeks rated pools over HTTP, and manages pairing.
+- **GameRunner** owns one live Lichess game, recovers authoritative state, and coordinates moves.
+- **ChesscomGameRunner** owns one live chess.com game over RSocket, replays TCN moves, and coordinates moves.
 - **MatchBudget** reserves unique-game and search capacity.
 - **EnginePool** schedules searches across a fixed number of lazily created workers through an interchangeable scheduling policy.
 - **ConfigurationService** validates changes against a repository port.
@@ -60,9 +62,22 @@ The pool, move selector, game runners, and scheduler depend on engine interfaces
 
 The HTTP server hosts React assets and the JSON API on the same local port. Server-Sent Events publish bounded dashboard snapshots; the client preserves unchanged game objects to avoid redrawing every board. Clocks use the server timestamp offset and a shared tick.
 
-Mutations require the dashboard's request header and same-origin requests. Optional password authentication protects dashboard APIs. HTTP and WebSocket Lichess transports use the same configurable browser User-Agent. Account credentials never enter shared dashboard DTOs.
+Mutations require the dashboard's request header and same-origin requests. Optional password authentication protects dashboard APIs. HTTP and WebSocket transports for both providers use the same configurable browser User-Agent. Account credentials never enter shared dashboard DTOs.
 
-`LichessRetry` centralizes attempt limits, delay, cancellation, permanent-error classification, and server cooldowns. The gateway injects the same policy into its HTTP adapter and every socket channel. An individual request defaults to three total attempts, 1,000 ms apart. Session recovery remains independent of this bounded transport policy.
+`LichessRetry` centralizes attempt limits, delay, cancellation, permanent-error classification, and server cooldowns. Both gateways inject the same policy into their HTTP adapters and every socket channel. An individual request defaults to three total attempts, 1,000 ms apart. Session recovery remains independent of this bounded transport policy.
+
+## chess.com transport
+
+Match notifications arrive on the pubsub socket (`wss://www.chess.com/pubsub?uid=…`, `pubsub.ts`), subscribed to `matcher/tickets/users/:me`. A ticket flips to `state: accepted` carrying our `color` and the full game transport: region shard, relative RSocket URL and explicit `watch`/`move`/`acknowledgement` routes. RSocket frames (`rsocket.ts`) and TCN moves (`tcn.ts`) follow the ticket, verified against `har/www.chess.com.har`.
+
+- `SETUP` carries `{acknowledgements, authentication: strict, client, userId}`.
+- `REQUEST_STREAM games.{uuid}.events` pushes full `{clocks, moves: [[tcn, clockMs]], updatedAt}` states; each push is answered with fire-and-forget `games.{uuid}.acknowledgments`.
+- Moves are `REQUEST_RESPONSE games.{uuid}.moves` with `{clock, index, metadata, move: tcn}`; the server confirms with `{updatedAt}` and then broadcasts the new state.
+- Server `echo` requests are answered with empty-payload responses; RSocket keepalives run every 2 s.
+
+Moves use TCN encoding (`tcn.ts`): two characters per move from a shared 64-square alphabet, with promotion and drop extensions. Matchmaking stays on HTTP (`POST /service/matcher/seeks/chess`), and pairing polls `GET /service/play/games` for the assigned game before subscribing. Stale seeks are detected through `GET /service/matcher/seeks` (a restart can return an `inactive` seek instead of a fresh one). Newborn seeks also report `inactive` for a while — the only success so far matched 51 s after creation — so a seek is left alone for 5 minutes before being recreated; instant delete-and-recreate churn was observed to prevent matching entirely. The live-game shard varies per game (`play-us-2-5`, `play-eu-1-5`, …): the RSocket URL is built from the game entry's `channel`/`href`/`transports`, never hard-coded. The play-client version constant and per-session token in `chesscom-http.ts` must be refreshed when chess.com ships a new play bundle.
+
+Terminal game states arrive in-band as a per-player `results` array (`['win', 'resigned']`, `players[0]` is White), which also carries resignations and timeouts; vanished games without results are recorded as aborted. Player names and ratings come from `playersDetails`. chess.com allows one live game per account, so its runner never searches while a game is active and reports `playing` instead of `searching`.
 
 ## Styling
 

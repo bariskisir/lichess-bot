@@ -2,7 +2,7 @@
 
 ## Start a session
 
-1. Add your Lichess sessions in **Accounts**.
+1. Add your lichess.org or chess.com sessions in **Accounts**.
 2. Choose time controls, game limits, and engine settings in **Settings**.
 3. Select **Start session**.
 
@@ -16,13 +16,13 @@ Accounts are authenticated and ongoing games are recovered before new pairings b
 | Pause pairing  | Stop new searches; continue existing games                              |
 | Resume pairing | Start searching again within session limits                             |
 | Finish session | Stop new searches and finish ongoing games                              |
-| Stop now       | Disconnect immediately and stop local analysis; games remain on Lichess |
+| Stop now       | Disconnect immediately and stop local analysis; games remain on their site |
 
-After **Stop now**, starting again recovers eligible ongoing games. Disconnecting does not resign games, and clocks continue on Lichess. A completed game between two managed accounts counts once toward the session target.
+After **Stop now**, starting again recovers eligible ongoing games. Disconnecting does not resign games, and clocks continue on their site. A completed game between two managed accounts counts once toward the session target.
 
 ## Live games
 
-Game cards put the complete board first, with compact player and clock details above and below it. Time control and game ID sit at the top left, with Thinking/Waiting at the top right. The game ID beside its time control opens the match on Lichess; selecting the board opens its inspector. Evaluations are shown from White's perspective; an older position's evaluation is marked as stale. The evaluation bar sits on the left and scales with the board. Its fill follows the sibling chessanalyzer app and the account's board orientation. The bar has no visible score text; hovering reveals the score and depth.
+Game cards put the complete board first, with compact player and clock details above and below it. Time control and game ID sit at the top left, with Thinking/Waiting at the top right. The game ID beside its time control opens the match on its site (lichess.org or chess.com); selecting the board opens its inspector. Evaluations are shown from White's perspective; an older position's evaluation is marked as stale. The evaluation bar sits on the left and scales with the board. Its fill follows the sibling chessanalyzer app and the account's board orientation. The bar has no visible score text; hovering reveals the score and depth.
 
 **Expand** shows only ongoing games and arranges complete boards in wrapping rows. History and navigation are hidden. There is no horizontal board strip. Use the small collapse icon at the top right or **Escape** to return to the workspace. Expanded boards start at the top with no title bar.
 
@@ -30,7 +30,7 @@ Game cards put the complete board first, with compact player and clock details a
 
 At the end of a game, the live board shows **Victory**, **Defeat**, **Draw**, or **Aborted** with its score for three seconds. A short entrance and countdown mark the result before the board moves into completed games. Reduced motion keeps the result visible without movement. Results are saved immediately; the display hold does not occupy an engine worker or reserve a game slot.
 
-**Recently finished** shows up to six completed games as a grid of smaller boards. **History** uses the same board grid for all retained games, with search and result filters. Completed boards are static and do not open an inspector. Ongoing boards still open their inspector for move navigation and PGN export. Lichess game and player links remain available.
+**Recently finished** shows up to six completed games as a grid of smaller boards. **History** uses the same board grid for all retained games, with search and result filters. Completed boards are static and do not open an inspector. Ongoing boards still open their inspector for move navigation and PGN export. Game and player links for both providers remain available.
 
 In **History**, select **Clear history** and **Confirm clear** to remove all saved games, including results currently in their three-second hold. Ongoing games and session counters continue unchanged. New games completed after the reset are retained. The preview cannot clear your saved history.
 
@@ -42,7 +42,7 @@ The **Delaying** status shows the remaining artificial wait with one decimal, su
 
 **Search depth** controls the initial candidate search (default 7). **Evaluation depth** controls the deeper root evaluation when alternatives or mistakes are enabled (default 15). Candidate verification uses the greater of evaluation depth and search depth. The dashboard evaluation belongs to the original position, rather than an alternative position's verification search.
 
-Clocks, position updates, and accepted moves come from Lichess. The board does not advance optimistically when a move is sent. Disconnections trigger retry and position recovery; stale analysis is cancelled before a changed position is played.
+Clocks, position updates, and accepted moves come from the provider. The board does not advance optimistically when a move is sent. Disconnections trigger retry and position recovery; stale analysis is cancelled before a changed position is played.
 
 ## Move timing
 
@@ -56,7 +56,7 @@ As play progresses, a rolling forecast uses remaining material and the halfmove 
 
 Queue waiting, connection setup, candidate search, evaluation, and verification all count toward the same total turn target. Only the unused portion becomes artificial waiting. In time trouble, artificial waiting disappears and analysis is shortened. Local engines can return their current result before the requested depth; optional deeper searches stop when the budget is exhausted. If the budget expires while work is queued or stalled, the application cancels that work and submits the last legal root candidate, or a legal emergency move if no engine candidate is available. An external interruption or changed position always cancels the move instead.
 
-This manages local time use conservatively; a frozen computer or lost connection can still prevent a move reaching Lichess before the clock expires.
+This manages local time use conservatively; a frozen computer or lost connection can still prevent a move reaching the provider before the clock expires.
 
 With **Dynamic delay** off, **Maximum delay** sets a random total target from the moment the application receives your turn. For a 3-second target and 2 seconds already elapsed, only 1 second remains to wait. If analysis exceeds the target, the move is sent immediately after analysis. Set the maximum to 0 to disable artificial waiting. Clock safety still takes precedence in time trouble.
 
@@ -64,7 +64,7 @@ With **Dynamic delay** off, **Maximum delay** sets a random total target from th
 
 Use the square theme icon beside the application name in the sidebar to switch between light and dark themes. Your choice is saved in the browser; the first visit follows your operating system preference. Session controls also live in the sidebar. On smaller screens, the navigation button at the bottom left opens this panel.
 
-The empty workspace offers a **dashboard preview** with explicitly labelled sample games. Preview does not contact Lichess and cannot change account or bot settings. Select **Return to workspace** to exit it.
+The empty workspace offers a **dashboard preview** with explicitly labelled sample games. Preview does not contact either provider and cannot change account or bot settings. Select **Return to workspace** to exit it.
 
 ## Password access
 

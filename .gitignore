@@ -11,3 +11,4 @@ playwright-report/
 .impeccable/review/
 .impeccable/seeds/
 *.tsbuildinfo
+har/

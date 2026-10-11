@@ -131,6 +131,7 @@ test('history displays smaller complete boards, filters results and links public
     const response = await route.fetch();
     const snapshot = await response.json();
     snapshot.games[0].id = 'AbC123XY';
+    snapshot.games[0].externalUrl = 'https://lichess.org/AbC123XY';
     await route.fulfill({ json: snapshot });
   });
   await page.goto('/');
@@ -181,7 +182,7 @@ test('settings expose the requested defaults and dashboard passwords can be set,
     await expect(page.getByLabel('Evaluation depth', { exact: true })).toHaveValue('15');
     await expect(page.getByLabel('Engine workers', { exact: true })).toHaveValue('3');
     await expect(page.getByLabel('Candidate variations', { exact: true })).toHaveValue('10');
-    await expect(page.locator('.pool-selector input:checked')).toHaveCount(6);
+    await expect(page.locator('.pool-selector input:checked')).toHaveCount(12);
     await expect(page.getByLabel('Lichess request attempts', { exact: true })).toHaveValue('3');
     await expect(page.getByLabel('Retry interval (ms)', { exact: true })).toHaveValue('1000');
     const engine = page.getByRole('button', { name: 'Engine', exact: true });

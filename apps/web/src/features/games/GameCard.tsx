@@ -13,15 +13,22 @@ function Player({
   player,
   own,
   linkProfile,
+  provider,
 }: {
   player: PlayerView;
   own: boolean;
   linkProfile: boolean;
+  provider: GameView['provider'];
 }) {
   const profileUrl =
-    linkProfile && /^[\w-]+$/.test(player.id)
-      ? `https://lichess.org/@/${encodeURIComponent(player.id)}`
-      : null;
+    !linkProfile
+      ? null
+      : provider === 'chesscom'
+        ? `https://www.chess.com/member/${encodeURIComponent(player.name)}`
+        : /^[\w-]+$/.test(player.id)
+          ? `https://lichess.org/@/${encodeURIComponent(player.id)}`
+          : null;
+  const site = provider === 'chesscom' ? 'chess.com' : 'Lichess';
   return (
     <span className="game-player">
       <span
@@ -35,7 +42,7 @@ function Player({
           href={profileUrl}
           target="_blank"
           rel="noreferrer"
-          title={`Open ${player.name}'s Lichess profile`}
+          title={`Open ${player.name}'s ${site} profile`}
         >
           {player.name}
         </a>
@@ -61,6 +68,8 @@ export const GameCard = memo(function GameCard({
   const top = orientation === 'white' ? 'black' : 'white';
   const bottom = orientation;
   const sample = game.id.startsWith('demo') || game.id.startsWith('history');
+  const site = game.provider === 'chesscom' ? 'chess.com' : 'Lichess';
+  const gameUrl = sample ? null : game.externalUrl || `https://lichess.org/${game.id}`;
   return (
     <article
       className={`game-card ${compact ? 'game-card--compact' : ''}`}
@@ -74,15 +83,15 @@ export const GameCard = memo(function GameCard({
           <span className="muted" aria-hidden="true">
             ·
           </span>
-          {sample ? (
+          {sample || !gameUrl ? (
             <span className="game-card__id">{game.id}</span>
           ) : (
             <a
               className="game-card__id"
-              href={`https://lichess.org/${game.id}`}
+              href={gameUrl}
               target="_blank"
               rel="noreferrer"
-              aria-label={`Open game ${game.id} on Lichess`}
+              aria-label={`Open game ${game.id} on ${site}`}
             >
               {game.id}
             </a>
@@ -91,7 +100,7 @@ export const GameCard = memo(function GameCard({
         <GameState game={game} />
       </div>
       <div className="game-card__player">
-        <Player player={game[top]} own={top === game.color} linkProfile={!sample} />
+        <Player player={game[top]} own={top === game.color} linkProfile={!sample} provider={game.provider} />
         {!compact && (
           <Clock clock={game.clock} color={top} turn={game.turn} finished={!!game.result} />
         )}
@@ -123,7 +132,7 @@ export const GameCard = memo(function GameCard({
       </div>
       <div className="game-card__player game-card__player--bottom">
         <div className="game-card__player-details">
-          <Player player={game[bottom]} own={bottom === game.color} linkProfile={!sample} />
+          <Player player={game[bottom]} own={bottom === game.color} linkProfile={!sample} provider={game.provider} />
           {compact && (
             <span className="game-card__finished-at">
               {timeAgo(game.finishedAt ?? game.startedAt)}

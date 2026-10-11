@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { request as httpRequest } from 'node:http';
 import pino from 'pino';
 import { ConfigurationService } from '../../../apps/server/src/application/config/configuration-service.js';
 import { DashboardStore } from '../../../apps/server/src/application/dashboard/dashboard-store.js';
@@ -20,7 +21,7 @@ afterEach(async () => {
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
-async function application() {
+async function application(host = '127.0.0.1') {
   const directory = await mkdtemp(join(tmpdir(), 'lichess-bot-http-'));
   cleanup.push(() => rm(directory, { recursive: true, force: true }));
   const config = new ConfigurationService(memoryConfig());
@@ -52,7 +53,7 @@ async function application() {
   );
   await auth.load();
   const server = new DashboardHttpServer(
-    { host: '127.0.0.1', port: 0, development: false, demo: false },
+    { host, port: 0, development: false, demo: false },
     config,
     runtime,
     store,
@@ -315,5 +316,33 @@ describe('dashboard API boundaries', () => {
     expect(demo.demo).toBe(true);
     expect(demo.games).toHaveLength(6);
     expect(app.gateway).not.toHaveBeenCalled();
+  });
+  it('accepts only its own address, including non-loopback bindings', async () => {
+    const statusWithHost = (url: string, host: string) =>
+      new Promise<number>((resolve, reject) => {
+        const peer = new URL(url);
+        const request = httpRequest(
+          {
+            host: peer.hostname,
+            port: Number(peer.port),
+            path: '/api/health',
+            headers: { Host: host },
+          },
+          (response) => {
+            response.resume();
+            response.on('end', () => resolve(response.statusCode ?? 0));
+          },
+        );
+        request.on('error', reject);
+        request.end();
+      });
+    const loopback = await application('127.0.0.1');
+    const loopbackPort = new URL(loopback.url).port;
+    expect(await statusWithHost(loopback.url, `localhost:${loopbackPort}`)).toBe(200);
+    expect(await statusWithHost(loopback.url, `example.com:${loopbackPort}`)).toBe(403);
+    const open = await application('0.0.0.0');
+    const openPort = new URL(open.url).port;
+    expect(await statusWithHost(open.url, `example.com:${openPort}`)).toBe(200);
+    expect(await statusWithHost(open.url, `example.com:9999`)).toBe(403);
   });
 });

@@ -67,7 +67,7 @@ If you lose the password, stop the application, rename `dashboard-auth.json` ins
 
 ## Application settings
 
-Everything is configured in the dashboard; the application does not load environment variables or .env files.
+Everything is configured in the dashboard; the application does not load environment variables or .env files. The `--host`, `--port`, `--data-directory` and `--logs-directory` launch flags override the bind address, dashboard port and storage locations (defaults `127.0.0.1`, settings port, `data` and `logs`).
 
 **Settings → Application** includes the browser User-Agent, dashboard port, retry attempts and interval, log level, and automatic session startup. The browser User-Agent is shared by lichess.org and chess.com HTTP and WebSocket connections. It does not identify itself as lichess-bot. Port changes require restarting the application; the dashboard stays local to this machine. Log level changes apply immediately. Automatic startup uses the saved accounts and settings on the next launch.
 

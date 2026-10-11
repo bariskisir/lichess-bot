@@ -8,6 +8,7 @@ export function readLaunchOptions(args = process.argv.slice(2)) {
   return {
     directory: resolve(value('data-directory') ?? 'data'),
     logsDirectory: resolve(value('logs-directory') ?? 'logs'),
+    host: value('host') ?? '127.0.0.1',
     port: value('port')
       ? z.coerce.number().int().min(0).max(65535).parse(value('port'))
       : undefined,

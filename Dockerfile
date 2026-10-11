@@ -15,4 +15,4 @@ RUN npm ci --omit=dev --no-audit --no-fund
 COPY --from=builder /app/dist ./dist
 EXPOSE 4173
 VOLUME /data
-CMD ["node", "dist/apps/server/src/main.js", "--port=4173", "--data-directory=/data", "--logs-directory=/data/logs"]
+CMD ["node", "dist/apps/server/src/main.js", "--host=0.0.0.0", "--port=4173", "--data-directory=/data", "--logs-directory=/data/logs"]

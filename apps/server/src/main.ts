@@ -75,9 +75,13 @@ const auth = new AuthenticationService(
   new ScryptPasswordHasher(),
 );
 await auth.load();
+if (!['localhost', '127.0.0.1', '[::1]'].includes(launch.host) && !auth.status().passwordEnabled)
+  logger.warn(
+    'The dashboard listens on a non-loopback address without a password. Set one in Settings → Dashboard access.',
+  );
 const server = new DashboardHttpServer(
   {
-    host: '127.0.0.1',
+    host: launch.host,
     port: launch.port ?? config.settings.dashboardPort,
     development: launch.development,
     demo: false,

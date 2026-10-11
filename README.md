@@ -52,7 +52,7 @@ docker build -t lichess-bot .
 docker run -d --restart unless-stopped --name lichess-bot -p 4173:4173 -v lichess-bot-data:/data lichess-bot
 ```
 
-Open **http://localhost:4173**. Settings and game history live in the `lichess-bot-data` volume (`/data`), logs under `/data/logs`. The container port is fixed at 4173.
+Open **http://localhost:4173**. Settings and game history live in the `lichess-bot-data` volume (`/data`), logs under `/data/logs`. The container port is fixed at 4173. The image listens on all interfaces: set a dashboard password in **Settings → Dashboard access** before exposing the port beyond your machine.
 
 ## Documentation
 

@@ -88,16 +88,23 @@ export class DashboardHttpServer {
   }
 
   private authorizedHost(request: IncomingMessage): boolean {
-    try {
-      const host = new URL(`http://${request.headers.host ?? ''}`);
-      return (
-        ['localhost', '127.0.0.1', '[::1]'].includes(host.hostname) &&
-        Number(host.port || 80) === this.boundPort
-      );
-    } catch {
-      return false;
-    }
+  // Non-loopback bindings (docker, remote servers) accept their own address.
+  // Set a dashboard password in Settings before exposing the port.
+  const loopback = ['localhost', '127.0.0.1', '[::1]'];
+  try {
+    const host = new URL(`http://${request.headers.host ?? ''}`);
+    if (Number(host.port || 80) !== this.boundPort) return false;
+    if (loopback.includes(host.hostname)) return true;
+    if (loopback.includes(this.options.host)) return false;
+    return (
+      this.options.host === '0.0.0.0' ||
+      this.options.host === '::' ||
+      host.hostname === this.options.host
+    );
+  } catch {
+    return false;
   }
+}
   private async handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
     if (!this.authorizedHost(request)) {
       this.json(response, 403, { error: 'Invalid dashboard host.' });

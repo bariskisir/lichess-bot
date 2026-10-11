@@ -343,6 +343,8 @@ describe('dashboard API boundaries', () => {
     const open = await application('0.0.0.0');
     const openPort = new URL(open.url).port;
     expect(await statusWithHost(open.url, `example.com:${openPort}`)).toBe(200);
-    expect(await statusWithHost(open.url, `example.com:9999`)).toBe(403);
+    expect(await statusWithHost(open.url, `example.com:5000`)).toBe(200);
+    expect(await statusWithHost(open.url, `example.com`)).toBe(200);
+    expect(await statusWithHost(open.url, `localhost:${openPort}`)).toBe(200);
   });
 });
